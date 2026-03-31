@@ -18,11 +18,15 @@
     import { getAuth, signInWithPopup, GithubAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     // 1. ใส่ Config ของ Firebase ของคุณ
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyDRMPmrIDDbG_JVN-lHdTURZyqCF3_szRE",
+  authDomain: "skinleave-5fa58.firebaseapp.com",
+  projectId: "skinleave-5fa58",
+  storageBucket: "skinleave-5fa58.firebasestorage.app",
+  messagingSenderId: "19165411790",
+  appId: "1:19165411790:web:9b351bb6e530456c03139f",
+  measurementId: "G-KWSNJXXS6M"
+};
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
