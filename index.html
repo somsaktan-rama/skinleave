@@ -87,22 +87,29 @@
   const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
   // ==========================================
 
+
   let currentUser = null;
   let systemData = { holidays: [], leaveTypes: [] };
   let calculatedLeaveDays = [];
 
-  // ฟังก์ชันกลางสำหรับเรียก API
+  // ฟังก์ชันจัดรูปแบบวันที่ YYYY-MM-DD แบบ Local Time (แก้ปัญหาเลือกวันที่ย้อนหลัง)
+  function formatDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   async function callAPI(action, data = {}) {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ป้องกันปัญหา CORS
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: action, ...data })
       });
       return await response.json();
     } catch (error) {
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
-      console.error(error);
+      console.error('API Error:', error);
       return null;
     }
   }
@@ -110,43 +117,17 @@
   window.onload = async function() {
     const data = await callAPI('getSystemData');
     if (data) systemData = data;
+    // ป้องกันการเลือกย้อนหลังทันทีที่โหลดหน้า
+    setupLeaveRules(); 
   };
 
   function showView(viewId) {
     document.querySelectorAll('.container > div').forEach(el => el.classList.add('hidden'));
     document.getElementById(viewId).classList.remove('hidden');
+    window.scrollTo(0,0);
   }
 
-  async function doLogin() {
-    const id = document.getElementById('login-id').value;
-    if (!id) return alert('กรุณากรอก RamaID');
-    
-    const btn = document.getElementById('btn-login');
-    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
-    
-    const result = await callAPI('login', { ramaId: id });
-    btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
-
-    if (result && result.success) {
-      currentUser = result.data;
-      document.getElementById('display-name').innerText = currentUser.name;
-      document.getElementById('display-group').innerText = currentUser.group;
-      document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
-      showView('view-main');
-    } else if (result) {
-      alert(result.message);
-    }
-  }
-
-  function logout() {
-    currentUser = null; document.getElementById('login-id').value = ''; showView('view-login');
-  }
-
-  function addDays(date, days) {
-    let result = new Date(date); result.setDate(result.getDate() + days); return result;
-  }
-  function formatDateStr(date) { return date.toISOString().split('T')[0]; }
-
+  // --- ปรับปรุง Logic การจัดการวันลาให้รองรับ Mobile ---
   function setupLeaveRules() {
     const type = document.getElementById('leave-type').value;
     const dateInput = document.getElementById('leave-date');
@@ -154,34 +135,44 @@
     const btnNext = document.getElementById('btn-next');
     const hint = document.getElementById('date-hint');
 
-    dateInput.value = ''; durationInput.innerHTML = '';
+    dateInput.value = '';
+    durationInput.innerHTML = '';
     
     if (!type) {
-      dateInput.disabled = true; durationInput.disabled = true; btnNext.disabled = true; return;
+      dateInput.disabled = true; durationInput.disabled = true; btnNext.disabled = true;
+      return;
     }
 
-    let today = new Date();
+    const today = new Date();
+    today.setHours(0,0,0,0); // Reset time เพื่อการเปรียบเทียบวันที่
+    
     let minDate, maxDate;
     let durations = [];
 
+    // กำหนดเงื่อนไขตามโจทย์ใหม่
     if (type === 'ป่วย') {
-      minDate = today; maxDate = addDays(today, 1);
+      minDate = today;
+      maxDate = new Date(today); maxDate.setDate(today.getDate() + 1);
       hint.innerText = 'เลือกได้: วันนี้ - พรุ่งนี้';
-      durations = [0.5, 1, 2, 3]; // เงื่อนไขใหม่
+      durations = [0.5, 1, 2, 3];
     } else if (type === 'กิจ') {
-      minDate = addDays(today, 1); maxDate = addDays(today, 180);
+      minDate = new Date(today); minDate.setDate(today.getDate() + 1);
+      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
       hint.innerText = 'เลือกได้: พรุ่งนี้ - 6 เดือนข้างหน้า';
-      durations = [0.5, 1, 2, 3, 4, 5]; // เงื่อนไขใหม่
+      durations = [0.5, 1, 2, 3, 4, 5];
     } else if (type === 'พักผ่อน' || type === 'ประชุม') {
-      minDate = addDays(today, 2); maxDate = addDays(today, 180);
+      minDate = new Date(today); minDate.setDate(today.getDate() + 2);
+      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
       hint.innerText = 'เลือกได้: มะรืนนี้ - 6 เดือนข้างหน้า';
-      for(let i=1; i<=5; i++) durations.push(i);
+      durations = [1, 2, 3, 4, 5];
     } else if (type === 'เรียนเลือก') {
-      minDate = addDays(today, 1); maxDate = addDays(today, 180);
-      hint.innerText = 'เลือกได้: วันพรุ่งนี้ - 6 เดือนข้างหน้า';
+      minDate = new Date(today); minDate.setDate(today.getDate() + 1);
+      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
+      hint.innerText = 'เลือกได้: พรุ่งนี้ - 6 เดือนข้างหน้า';
       for(let i=1; i<=30; i++) durations.push(i);
     } else if (type === 'ต่างประเทศ') {
-      minDate = addDays(today, 7); maxDate = addDays(today, 180);
+      minDate = new Date(today); minDate.setDate(today.getDate() + 7);
+      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
       hint.innerText = 'เลือกได้: 7 วันข้างหน้า - 6 เดือนข้างหน้า';
       for(let i=1; i<=15; i++) durations.push(i);
     }
@@ -196,64 +187,83 @@
       durationInput.appendChild(opt);
     });
     
-    durationInput.disabled = false; btnNext.disabled = false;
+    durationInput.disabled = false;
+    btnNext.disabled = false;
   }
 
-  function getWorkingDays(startDate, duration) {
-    let days = []; let currentDate = new Date(startDate);
+  function getWorkingDays(startDateStr, duration) {
+    let days = [];
+    let currentDate = new Date(startDateStr);
     let daysNeeded = Math.ceil(duration);
-    
-    while (days.length < daysNeeded) {
-      let dateStr = formatDateStr(currentDate);
-      let dayOfWeek = currentDate.getDay();
+    let safetyNet = 0; // ป้องกัน infinite loop
+
+    while (days.length < daysNeeded && safetyNet < 100) {
+      safetyNet++;
+      let dStr = formatDateStr(currentDate);
+      let dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
       let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-      let isHoliday = systemData.holidays.includes(dateStr);
+      let isHoliday = (systemData.holidays || []).includes(dStr);
       
-      if (!isWeekend && !isHoliday) days.push(dateStr);
+      if (!isWeekend && !isHoliday) {
+        days.push(dStr);
+      }
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return days;
   }
 
   function prepareExamSelection() {
-    const startDate = document.getElementById('leave-date').value;
-    const duration = parseFloat(document.getElementById('leave-duration').value);
-    const type = document.getElementById('leave-type').value;
-    
-    if (!startDate) return alert('กรุณาเลือกวันที่เริ่มต้นลา');
-
-    calculatedLeaveDays = getWorkingDays(startDate, duration);
-    const container = document.getElementById('exam-list-container');
-    container.innerHTML = '';
-
-    calculatedLeaveDays.forEach((dateStr) => {
-      let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
+    try {
+      const startDate = document.getElementById('leave-date').value;
+      const duration = parseFloat(document.getElementById('leave-duration').value);
+      const type = document.getElementById('leave-type').value;
       
-      // เงื่อนไข Checkbox ใหม่
-      if (type === 'ป่วย' || type === 'กิจ') {
-        html += `<div class="form-check form-check-inline">
-                   <input class="form-check-input" type="checkbox" value="เช้า" checked>
-                   <label class="form-check-label">เช้า</label>
-                 </div>`;
-        if (duration >= 1) { // ถ้าลาตั้งแต่ 1 วันขึ้นไป ให้มีช่องบ่าย
-          html += `<div class="form-check form-check-inline">
-                     <input class="form-check-input" type="checkbox" value="บ่าย">
-                     <label class="form-check-label">บ่าย</label>
-                   </div>`;
-        }
-      } else {
-        // ประเภทอื่นๆ เช้า บ่าย เย็น
-        html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
-                 <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
-                 <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
+      if (!startDate) {
+        alert('กรุณาเลือกวันที่ต้องการลา');
+        return;
       }
-      
-      html += `</div>`;
-      container.innerHTML += html;
-    });
 
-    showView('view-exam');
+      calculatedLeaveDays = getWorkingDays(startDate, duration);
+      
+      if (calculatedLeaveDays.length === 0) {
+        alert('ไม่สามารถคำนวณวันลาได้ กรุณาตรวจสอบวันที่เลือก');
+        return;
+      }
+
+      const container = document.getElementById('exam-list-container');
+      container.innerHTML = '';
+
+      calculatedLeaveDays.forEach((dateStr) => {
+        let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
+        
+        if (type === 'ป่วย' || type === 'กิจ') {
+          html += `<div class="form-check form-check-inline">
+                     <input class="form-check-input" type="checkbox" value="เช้า" checked>
+                     <label class="form-check-label">เช้า</label>
+                   </div>`;
+          // ป่วย/กิจ 0.5 วัน มีแค่เช้า | 1 วันขึ้นไป มีเช้า+บ่าย
+          if (duration >= 1) { 
+            html += `<div class="form-check form-check-inline">
+                       <input class="form-check-input" type="checkbox" value="บ่าย">
+                       <label class="form-check-label">บ่าย</label>
+                     </div>`;
+          }
+        } else {
+          // ประเภทอื่นๆ มีครบ 3 ช่วง
+          html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
+                   <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
+                   <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
+        }
+        html += `</div>`;
+        container.innerHTML += html;
+      });
+
+      showView('view-exam');
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
   }
+
 
   async function submitLeave() {
     const btn = document.getElementById('btn-confirm');
