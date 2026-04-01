@@ -35,7 +35,7 @@
       <label class="form-label small">RamaID (รวมเลข 0 นำหน้า)</label>
       <input type="text" id="login-id" class="form-control form-control-lg" placeholder="เช่น 012345">
     </div>
-    <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
+    ="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
     <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">ค้นหาข้อมูลการลา</button>
   </div>
 
@@ -73,6 +73,17 @@
       </div>
 
       <button class="btn btn-primary btn-lg w-100" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป</button>
+
+		<button class="btn btn-info w-100 mt-2 mb-3 text-white" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
+<div id="view-my-leave" class="hidden">
+  <div class="card p-3">
+    <h5 class="fw-bold mb-3">รายการวันลาที่กำลังจะมาถึง</h5>
+    <div id="my-leave-results"></div>
+    <button class="btn btn-secondary w-100 mt-4" onclick="showView('view-main')">กลับหน้าหลัก</button>
+  </div>
+	
+</div>
+		
     </div>
     <button class="btn btn-light text-danger w-100" onclick="logout()">ออกจากระบบ</button>
   </div>
@@ -386,6 +397,34 @@ async function doLogin() {
     }
     document.getElementById('search-results').innerHTML = html;
   }
+
+	async function loadMyLeaves() {
+  const resultsDiv = document.getElementById('my-leave-results');
+  resultsDiv.innerHTML = '<p class="text-center">กำลังโหลดข้อมูล...</p>';
+  showView('view-my-leave');
+
+  const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+  
+  if (!results || results.length === 0) {
+    resultsDiv.innerHTML = '<div class="alert alert-light text-center">ไม่มีรายการลาตั้งแต่วันนี้เป็นต้นไป</div>';
+    return;
+  }
+
+  let html = '<div class="list-group shadow-sm">';
+  results.forEach(item => {
+    html += `
+      <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
+        <div class="d-flex justify-content-between">
+          <span class="fw-bold text-primary">${item.leaveDate}</span>
+          <span class="badge bg-warning text-dark">${item.leaveCode}</span>
+        </div>
+        <div class="small mt-1 text-muted">ช่วงเวลาลาตรวจ: ${item.exam}</div>
+      </div>`;
+  });
+  html += '</div>';
+  resultsDiv.innerHTML = html;
+}
+	
 </script>
 </body>
 </html>
