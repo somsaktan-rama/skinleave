@@ -127,67 +127,62 @@
 <script>
   // ==========================================
   const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
-  const MY_LIFF_ID = 'ใส่_LIFF_ID_ที่ได้จาก_LINE_Developers_ที่นี่';
+  const MY_LIFF_ID = '2009672880-fTIAHxNE';
   // ==========================================
 
+
   let currentUser = null;
-  let systemData = { holidays: [], leaveTypes: [] };
-  let calculatedLeaveDays = [];
+  let lineData = { uid: null, displayName: null }; // ตัวแปรเก็บข้อมูล LINE
 
-  function formatDateStr(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-
-  async function callAPI(action, data = {}) {
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow',
-        body: JSON.stringify({ action: action, ...data })
-      });
-      const responseText = await response.text();
-      return JSON.parse(responseText);
-    } catch (error) {
-      console.error('API Error:', error);
-      return null;
-    }
-  }
-
+  // ฟังก์ชันเริ่มต้น LIFF เมื่อโหลดหน้าเว็บ
   window.onload = async function() {
-    const data = await callAPI('getSystemData');
-    if (data) {
-        systemData = data;
-        console.log('โหลดวันหยุดสำเร็จ:', systemData.holidays); // เพื่อให้เช็คการเชื่อมต่อได้
+    try {
+      await liff.init({ liffId: MY_LIFF_ID });
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        lineData.uid = profile.userId;
+        lineData.displayName = profile.displayName;
+        console.log("เชื่อมต่อ LINE สำเร็จ:", lineData.displayName);
+      } else {
+        // หากไม่ได้เปิดใน LINE หรือยังไม่ล็อกอิน สามารถเลือกให้ liff.login() ได้
+        // liff.login(); 
+      }
+    } catch (err) {
+      console.error("LIFF Initialization failed", err);
     }
+
+    const data = await callAPI('getSystemData');
+    if (data) systemData = data;
     setupLeaveRules(); 
   };
-
-  function showView(viewId) {
-    document.querySelectorAll('.container > div').forEach(el => el.classList.add('hidden'));
-    document.getElementById(viewId).classList.remove('hidden');
-    window.scrollTo(0,0);
-  }
 
   async function doLogin() {
     const id = document.getElementById('login-id').value;
     if (!id) return alert('กรุณากรอก RamaID');
+    
     const btn = document.getElementById('btn-login');
     btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
-    const result = await callAPI('login', { ramaId: id });
+    
+    // ส่งค่า ramaId พร้อมกับข้อมูล LINE ไปที่ Backend
+    const result = await callAPI('login', { 
+      ramaId: id, 
+      lineUid: lineData.uid, 
+      lineDisplayName: lineData.displayName 
+    });
+    
     btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
+
     if (result && result.success) {
       currentUser = result.data;
       document.getElementById('display-name').innerText = currentUser.name;
       document.getElementById('display-group').innerText = currentUser.group;
       document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
       showView('view-main');
-    } else if (result) { alert(result.message); }
+    } else if (result) {
+      alert(result.message);
+    }
   }
-
+  
   function logout() { currentUser = null; document.getElementById('login-id').value = ''; showView('view-login'); }
 
   function setupLeaveRules() {
@@ -358,6 +353,7 @@
     }
     document.getElementById('search-results').innerHTML = html;
   }
+
 </script>
 </body>
 </html>
