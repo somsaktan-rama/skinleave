@@ -31,7 +31,7 @@
         <span class="text-muted">สาขาวิชาผิวหนัง</span>
     </div>
     <div class="mb-3">
-      <label class="form-label small">เสขรหัสบุคคล รามาธิบดี</label>
+      <label class="form-label small">รหัสบุคคล</label>
       <input type="text" id="login-id" class="form-control form-control-lg" placeholder="เช่น 12345">
     </div>
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
@@ -52,17 +52,17 @@
           <option value="">-- เลือกประเภท --</option>
           <option value="ป่วย">ป่วย</option>
           <option value="กิจ">กิจ</option>
-          <option value="ตรวจ">ตรวจ</option>
           <option value="พักผ่อน">พักผ่อน</option>
           <option value="เรียนเลือก">เรียนเลือก</option>
           <option value="ประชุม">ประชุม</option>
           <option value="ต่างประเทศ">ต่างประเทศ</option>
-          </select>
+          <option value="ตรวจ">ตรวจ</option>
+        </select>
       </div>
       
       <div class="mb-3">
         <label class="fw-bold">วันที่เริ่มต้นลา</label>
-        <input type="date" id="leave-date" class="form-control" disabled>
+        <input type="date" id="leave-date" class="form-control" onchange="checkDateValidity()" disabled>
         <small id="date-hint" class="text-danger"></small>
       </div>
 
@@ -124,7 +124,9 @@
 </div>
 
 <script>
+  // ==========================================
   const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
+  // ==========================================
 
   let currentUser = null;
   let systemData = { holidays: [], leaveTypes: [] };
@@ -155,7 +157,10 @@
 
   window.onload = async function() {
     const data = await callAPI('getSystemData');
-    if (data) systemData = data;
+    if (data) {
+        systemData = data;
+        console.log('โหลดวันหยุดสำเร็จ:', systemData.holidays); // เพื่อให้เช็คการเชื่อมต่อได้
+    }
     setupLeaveRules(); 
   };
 
@@ -230,18 +235,47 @@
     durationInput.disabled = false; btnNext.disabled = false;
   }
 
+  // --- ฟังก์ชันดักจับ Mobile ที่เลือกวันที่ย้อนหลัง ---
+  function checkDateValidity() {
+    const dateInput = document.getElementById('leave-date');
+    if (!dateInput.value) return;
+
+    const selectedDateStr = dateInput.value;
+    const minDateStr = dateInput.min;
+    const maxDateStr = dateInput.max;
+
+    if (minDateStr && selectedDateStr < minDateStr) {
+      alert('ไม่อนุญาตให้เลือกวันที่ย้อนหลัง หรือก่อนเงื่อนไขที่กำหนดครับ');
+      dateInput.value = ''; // ล้างค่าทิ้งทันที
+    } else if (maxDateStr && selectedDateStr > maxDateStr) {
+      alert('ไม่อนุญาตให้เลือกวันที่เกินเงื่อนไขที่กำหนดครับ');
+      dateInput.value = ''; // ล้างค่าทิ้งทันที
+    }
+  }
+
+  // --- ฟังก์ชันข้ามวันหยุด (เสาร์-อาทิตย์ และ holiday) ---
   function getWorkingDays(startDateStr, duration) {
     let days = [];
     let currentDate = new Date(startDateStr);
     let daysNeeded = Math.ceil(duration);
     let safetyNet = 0; 
+    
+    // ตรวจสอบว่ามีข้อมูลวันหยุดในระบบหรือไม่
+    const safeHolidays = systemData.holidays || [];
+
     while (days.length < daysNeeded && safetyNet < 100) {
       safetyNet++;
       let dStr = formatDateStr(currentDate);
       let dayOfWeek = currentDate.getDay(); 
       let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-      let isHoliday = (systemData.holidays || []).includes(dStr);
-      if (!isWeekend && !isHoliday) { days.push(dStr); }
+      
+      // เช็คว่าวันที่นี้ตรงกับวันหยุดนักขัตฤกษ์ใน Sheet หรือไม่
+      let isHoliday = safeHolidays.includes(dStr);
+      
+      if (!isWeekend && !isHoliday) { 
+          days.push(dStr); 
+      }
+      // บวกเพิ่มไปอีก 1 วัน
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return days;
@@ -252,8 +286,10 @@
     const duration = parseFloat(document.getElementById('leave-duration').value);
     const type = document.getElementById('leave-type').value;
     if (!startDate) return alert('กรุณาเลือกวันที่');
+    
     calculatedLeaveDays = getWorkingDays(startDate, duration);
-    if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้');
+    
+    if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้ (อาจตรงกับวันหยุดทั้งหมด)');
 
     const container = document.getElementById('exam-list-container');
     container.innerHTML = '';
