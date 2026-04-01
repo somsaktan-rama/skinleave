@@ -220,4 +220,137 @@
     dateInput.max = formatDateStr(maxDate);
     dateInput.disabled = false;
     
-    durations.
+    durations.forEach(d => {
+      let opt = document.createElement('option');
+      opt.value = d; opt.innerText = d + ' วัน';
+      durationInput.appendChild(opt);
+    });
+    
+    durationInput.disabled = false;
+    btnNext.disabled = false;
+  }
+
+  // ฟังก์ชันหาวันทำการ
+  function getWorkingDays(startDateStr, duration) {
+    let days = [];
+    let currentDate = new Date(startDateStr);
+    let daysNeeded = Math.ceil(duration);
+    let safetyNet = 0; 
+
+    while (days.length < daysNeeded && safetyNet < 100) {
+      safetyNet++;
+      let dStr = formatDateStr(currentDate);
+      let dayOfWeek = currentDate.getDay(); 
+      let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+      let isHoliday = (systemData.holidays || []).includes(dStr);
+      
+      if (!isWeekend && !isHoliday) {
+        days.push(dStr);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return days;
+  }
+
+  // ฟังก์ชันเตรียมหน้าเลือกช่วงเวลาตรวจ
+  function prepareExamSelection() {
+    try {
+      const startDate = document.getElementById('leave-date').value;
+      const duration = parseFloat(document.getElementById('leave-duration').value);
+      const type = document.getElementById('leave-type').value;
+      
+      if (!startDate) return alert('กรุณาเลือกวันที่ต้องการลา');
+
+      calculatedLeaveDays = getWorkingDays(startDate, duration);
+      
+      if (calculatedLeaveDays.length === 0) {
+        return alert('ไม่สามารถคำนวณวันลาได้ กรุณาตรวจสอบวันที่เลือก (อาจตรงกับวันหยุดทั้งหมด)');
+      }
+
+      const container = document.getElementById('exam-list-container');
+      container.innerHTML = '';
+
+      calculatedLeaveDays.forEach((dateStr) => {
+        let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
+        
+        if (type === 'ป่วย' || type === 'กิจ') {
+          html += `<div class="form-check form-check-inline">
+                     <input class="form-check-input" type="checkbox" value="เช้า" checked>
+                     <label class="form-check-label">เช้า</label>
+                   </div>`;
+          if (duration >= 1) { 
+            html += `<div class="form-check form-check-inline">
+                       <input class="form-check-input" type="checkbox" value="บ่าย">
+                       <label class="form-check-label">บ่าย</label>
+                     </div>`;
+          }
+        } else {
+          html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
+                   <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
+                   <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
+        }
+        html += `</div>`;
+        container.innerHTML += html;
+      });
+
+      showView('view-exam');
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  }
+
+  // ฟังก์ชันบันทึกข้อมูลการลา
+  async function submitLeave() {
+    const btn = document.getElementById('btn-confirm');
+    btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
+
+    let examDetails = [];
+    document.querySelectorAll('.exam-row').forEach(row => {
+      let date = row.getAttribute('data-date');
+      let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
+      examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+    });
+
+    const payload = {
+      user: currentUser,
+      leaveCode: document.getElementById('leave-type').value,
+      startDate: document.getElementById('leave-date').value,
+      duration: document.getElementById('leave-duration').value,
+      examDetails: examDetails
+    };
+
+    const res = await callAPI('submitLeave', { data: payload });
+    
+    btn.disabled = false; btn.innerText = 'ยืนยันข้อมูล';
+    if(res && res.success) {
+      alert('บันทึกข้อมูลสำเร็จ');
+      showView('view-main');
+      document.getElementById('leave-date').value = '';
+      document.getElementById('leave-type').value = '';
+      setupLeaveRules();
+    }
+  }
+
+  // ฟังก์ชันค้นหาข้อมูล
+  async function executeSearch() {
+    const date = document.getElementById('search-date').value;
+    if (!date) return alert('กรุณาเลือกวันที่');
+    
+    document.getElementById('search-results').innerHTML = '<p class="text-center">กำลังค้นหา...</p>';
+    const results = await callAPI('searchLeave', { date: date });
+    
+    let html = '';
+    if (!results || results.length === 0) {
+      html = '<div class="alert alert-warning">ไม่มีผู้ลาในวันที่ระบุ</div>';
+    } else {
+      html = '<ul class="list-group">';
+      results.forEach(r => {
+        html += `<li class="list-group-item"><strong>${r.name}</strong> (${r.group})<br><small>ประเภท: ${r.leaveCode} | ลาตรวจ: ${r.exam}</small></li>`;
+      });
+      html += '</ul>';
+    }
+    document.getElementById('search-results').innerHTML = html;
+  }
+</script>
+</body>
+</html>
