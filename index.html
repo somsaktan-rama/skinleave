@@ -19,7 +19,7 @@
   <div id="view-login" class="card p-4">
     <h3 class="text-center mb-4">ระบบลางานออนไลน์<br><small>สาขาวิชาผิวหนัง</small></h3>
     <div class="mb-3">
-      <input type="number" id="login-id" class="form-control form-control-lg" placeholder="รหัส RamaID">
+      <input type="number" id="login-id" class="form-control form-control-lg" placeholder="รหัสบุคคล RamaID">
     </div>
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
     <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">ค้นหาข้อมูลการลา</button>
@@ -40,11 +40,12 @@
           <option value="">-- เลือกประเภท --</option>
           <option value="ป่วย">ป่วย</option>
           <option value="กิจ">กิจ</option>
+          <option value="ตรวจ">ตรวจ</option> 
           <option value="พักผ่อน">พักผ่อน</option>
           <option value="เรียนเลือก">เรียนเลือก</option>
           <option value="ประชุม">ประชุม</option>
           <option value="ต่างประเทศ">ต่างประเทศ</option>
-        </select>
+          </select>
       </div>
       
       <div class="mb-3">
@@ -83,7 +84,7 @@
 
 <script>
   // ==========================================
-  // นำ URL ของ Web App ที่ได้จาก Google Apps Script มาวางที่นี่
+  // นำ URL ของ Web App ที่ได้จาก Google Apps Script มาวางที่นี่ (อย่าลืมเครื่องหมาย ' หัวท้าย)
   const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
   // ==========================================
 
@@ -105,7 +106,7 @@
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow', // จำเป็นสำหรับการทำงานข้ามโดเมนของ Google
+        redirect: 'follow',
         body: JSON.stringify({ action: action, ...data })
       });
       
@@ -189,6 +190,7 @@
     let minDate, maxDate;
     let durations = [];
 
+    // เงื่อนไขการลาแต่ละประเภท
     if (type === 'ป่วย') {
       minDate = today;
       maxDate = new Date(today); maxDate.setDate(today.getDate() + 1);
@@ -214,6 +216,12 @@
       maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
       hint.innerText = 'เลือกได้: 7 วันข้างหน้า - 6 เดือนข้างหน้า';
       for(let i=1; i<=15; i++) durations.push(i);
+    } else if (type === 'ตรวจ') {
+      // เพิ่มเงื่อนไขการลา "ตรวจ" ตามที่ขอ
+      minDate = today;
+      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 1);
+      hint.innerText = 'เลือกได้: วันนี้ - 1 เดือนข้างหน้า';
+      durations = [1]; // ให้เลือกได้ 1 วัน
     }
 
     dateInput.min = formatDateStr(minDate);
@@ -285,6 +293,7 @@
                      </div>`;
           }
         } else {
+          // ถ้าไม่ใช่ ป่วย หรือ กิจ (รวมถึง "ตรวจ") จะเข้าเงื่อนไขนี้ คือแสดง เช้า บ่าย เย็น
           html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
                    <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
                    <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
