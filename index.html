@@ -194,7 +194,7 @@
   }
 
   // --- จุดที่อาจจะเกิด Error ได้แก้ไขแล้ว ---
-  async function doLogin() {
+async function doLogin() {
     try {
       const id = document.getElementById('login-id').value;
       if (!id) return alert('กรุณากรอก RamaID');
@@ -203,31 +203,31 @@
       btn.disabled = true; 
       btn.innerText = 'กำลังตรวจสอบ...';
       
+      // ตรวจสอบว่า lineProfile.uid มีค่าจริงก่อนส่ง
+      console.log("ส่งข้อมูล Login:", id, lineProfile.uid, lineProfile.displayName);
+
       const result = await callAPI('login', { 
         ramaId: id,
-        lineUid: lineProfile.uid,
-        lineDisplayName: lineProfile.displayName
+        lineUid: lineProfile.uid, // ต้องตรงกับที่ backend รับ
+        lineDisplayName: lineProfile.displayName // ต้องตรงกับที่ backend รับ
       });
       
       btn.disabled = false; 
       btn.innerText = 'เข้าสู่ระบบ';
       
       if (result && result.success) {
-        currentUser = result.data;
-        document.getElementById('display-name').innerText = currentUser.name;
-        document.getElementById('display-group').innerText = currentUser.group;
-        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
+        // ... โค้ดเดิม ...
         showView('view-main');
       } else if (result) { 
         alert(result.message); 
       }
     } catch(err) {
-      alert("มีข้อผิดพลาดในระบบ: " + err.message);
+      alert("Error: " + err.message);
       document.getElementById('btn-login').disabled = false;
       document.getElementById('btn-login').innerText = 'เข้าสู่ระบบ';
     }
   }
-
+	
   function logout() { currentUser = null; document.getElementById('login-id').value = ''; showView('view-login'); }
 
   function setupLeaveRules() {
