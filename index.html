@@ -221,8 +221,9 @@
       maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
       hint.innerText = 'เลือกได้: 7 วันข้างหน้า - 6 เดือนข้างหน้า'; for(let i=1; i<=15; i++) durations.push(i);
     } else if (type === 'ตรวจ') {
-      minDate = today; maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 1);
-      hint.innerText = 'เลือกได้: วันนี้ - 1 เดือนข้างหน้า'; durations = [1];
+      minDate = today; 
+      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12);
+      hint.innerText = 'เลือกได้: วันนี้ - 1 ปีข้างหน้า'; durations = [1];
     }
 
     dateInput.min = formatDateStr(minDate);
