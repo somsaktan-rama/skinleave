@@ -83,7 +83,7 @@
 
 <script>
   // ==========================================
-  // นำ URL ของ Web App ที่ได้จากขั้นตอนที่ 1 มาวางที่นี่
+  // นำ URL ของ Web App ที่ได้จาก Google Apps Script มาวางที่นี่
   const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
   // ==========================================
 
@@ -91,7 +91,7 @@
   let systemData = { holidays: [], leaveTypes: [] };
   let calculatedLeaveDays = [];
 
-  // ฟังก์ชันจัดรูปแบบวันที่ YYYY-MM-DD แบบ Local Time (แก้ปัญหาเลือกวันที่ย้อนหลัง)
+  // ฟังก์ชันจัดรูปแบบวันที่ YYYY-MM-DD แบบ Local Time
   function formatDateStr(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -99,18 +99,16 @@
     return `${y}-${m}-${d}`;
   }
 
-async function callAPI(action, data = {}) {
+  // ฟังก์ชันเชื่อมต่อกับ Google Apps Script
+  async function callAPI(action, data = {}) {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก ห้ามเปลี่ยนเป็น application/json
-        },
-        redirect: 'follow', // เพิ่มบรรทัดนี้ เพื่อให้ตาม URL ไปยังเซิร์ฟเวอร์ย่อยของ Google
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow', // จำเป็นสำหรับการทำงานข้ามโดเมนของ Google
         body: JSON.stringify({ action: action, ...data })
       });
       
-      // ตรวจสอบว่า Google ส่งหน้า HTML แจ้ง Error กลับมาแทนที่จะเป็น JSON หรือไม่
       const responseText = await response.text();
       try {
         return JSON.parse(responseText);
@@ -119,21 +117,57 @@ async function callAPI(action, data = {}) {
         alert('เชื่อมต่อฐานข้อมูลไม่ได้ (อาจตั้งค่า Deploy ผิด หรือ URL ผิด)');
         return null;
       }
-      
     } catch (error) {
       console.error('API Error:', error);
       alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
       return null;
     }
   }
-  
+
+  // โหลดข้อมูลเบื้องต้นเมื่อเปิดหน้าเว็บ
+  window.onload = async function() {
+    const data = await callAPI('getSystemData');
+    if (data) systemData = data;
+    setupLeaveRules(); 
+  };
+
+  // ฟังก์ชันสลับหน้าจอ
   function showView(viewId) {
     document.querySelectorAll('.container > div').forEach(el => el.classList.add('hidden'));
     document.getElementById(viewId).classList.remove('hidden');
     window.scrollTo(0,0);
   }
 
-  // --- ปรับปรุง Logic การจัดการวันลาให้รองรับ Mobile ---
+  // ฟังก์ชันเข้าสู่ระบบ
+  async function doLogin() {
+    const id = document.getElementById('login-id').value;
+    if (!id) return alert('กรุณากรอก RamaID');
+    
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
+    
+    const result = await callAPI('login', { ramaId: id });
+    btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
+
+    if (result && result.success) {
+      currentUser = result.data;
+      document.getElementById('display-name').innerText = currentUser.name;
+      document.getElementById('display-group').innerText = currentUser.group;
+      document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
+      showView('view-main');
+    } else if (result) {
+      alert(result.message);
+    }
+  }
+
+  // ฟังก์ชันออกจากระบบ
+  function logout() {
+    currentUser = null; 
+    document.getElementById('login-id').value = ''; 
+    showView('view-login');
+  }
+
+  // ฟังก์ชันตั้งค่าเงื่อนไขวันที่และจำนวนวันลา
   function setupLeaveRules() {
     const type = document.getElementById('leave-type').value;
     const dateInput = document.getElementById('leave-date');
@@ -150,12 +184,11 @@ async function callAPI(action, data = {}) {
     }
 
     const today = new Date();
-    today.setHours(0,0,0,0); // Reset time เพื่อการเปรียบเทียบวันที่
+    today.setHours(0,0,0,0); 
     
     let minDate, maxDate;
     let durations = [];
 
-    // กำหนดเงื่อนไขตามโจทย์ใหม่
     if (type === 'ป่วย') {
       minDate = today;
       maxDate = new Date(today); maxDate.setDate(today.getDate() + 1);
@@ -187,140 +220,4 @@ async function callAPI(action, data = {}) {
     dateInput.max = formatDateStr(maxDate);
     dateInput.disabled = false;
     
-    durations.forEach(d => {
-      let opt = document.createElement('option');
-      opt.value = d; opt.innerText = d + ' วัน';
-      durationInput.appendChild(opt);
-    });
-    
-    durationInput.disabled = false;
-    btnNext.disabled = false;
-  }
-
-  function getWorkingDays(startDateStr, duration) {
-    let days = [];
-    let currentDate = new Date(startDateStr);
-    let daysNeeded = Math.ceil(duration);
-    let safetyNet = 0; // ป้องกัน infinite loop
-
-    while (days.length < daysNeeded && safetyNet < 100) {
-      safetyNet++;
-      let dStr = formatDateStr(currentDate);
-      let dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
-      let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-      let isHoliday = (systemData.holidays || []).includes(dStr);
-      
-      if (!isWeekend && !isHoliday) {
-        days.push(dStr);
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    return days;
-  }
-
-  function prepareExamSelection() {
-    try {
-      const startDate = document.getElementById('leave-date').value;
-      const duration = parseFloat(document.getElementById('leave-duration').value);
-      const type = document.getElementById('leave-type').value;
-      
-      if (!startDate) {
-        alert('กรุณาเลือกวันที่ต้องการลา');
-        return;
-      }
-
-      calculatedLeaveDays = getWorkingDays(startDate, duration);
-      
-      if (calculatedLeaveDays.length === 0) {
-        alert('ไม่สามารถคำนวณวันลาได้ กรุณาตรวจสอบวันที่เลือก');
-        return;
-      }
-
-      const container = document.getElementById('exam-list-container');
-      container.innerHTML = '';
-
-      calculatedLeaveDays.forEach((dateStr) => {
-        let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
-        
-        if (type === 'ป่วย' || type === 'กิจ') {
-          html += `<div class="form-check form-check-inline">
-                     <input class="form-check-input" type="checkbox" value="เช้า" checked>
-                     <label class="form-check-label">เช้า</label>
-                   </div>`;
-          // ป่วย/กิจ 0.5 วัน มีแค่เช้า | 1 วันขึ้นไป มีเช้า+บ่าย
-          if (duration >= 1) { 
-            html += `<div class="form-check form-check-inline">
-                       <input class="form-check-input" type="checkbox" value="บ่าย">
-                       <label class="form-check-label">บ่าย</label>
-                     </div>`;
-          }
-        } else {
-          // ประเภทอื่นๆ มีครบ 3 ช่วง
-          html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
-                   <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
-                   <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
-        }
-        html += `</div>`;
-        container.innerHTML += html;
-      });
-
-      showView('view-exam');
-    } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
-    }
-  }
-
-
-  async function submitLeave() {
-    const btn = document.getElementById('btn-confirm');
-    btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
-
-    let examDetails = [];
-    document.querySelectorAll('.exam-row').forEach(row => {
-      let date = row.getAttribute('data-date');
-      let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-      examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
-    });
-
-    const payload = {
-      user: currentUser,
-      leaveCode: document.getElementById('leave-type').value,
-      startDate: document.getElementById('leave-date').value,
-      duration: document.getElementById('leave-duration').value,
-      examDetails: examDetails
-    };
-
-    const res = await callAPI('submitLeave', { data: payload });
-    
-    btn.disabled = false; btn.innerText = 'ยืนยันข้อมูล';
-    if(res && res.success) {
-      alert('บันทึกข้อมูลสำเร็จ');
-      showView('view-main');
-      document.getElementById('leave-date').value = '';
-      document.getElementById('leave-type').value = '';
-      setupLeaveRules();
-    }
-  }
-
-  async function executeSearch() {
-    const date = document.getElementById('search-date').value;
-    if (!date) return alert('กรุณาเลือกวันที่');
-    
-    document.getElementById('search-results').innerHTML = '<p class="text-center">กำลังค้นหา...</p>';
-    const results = await callAPI('searchLeave', { date: date });
-    
-    let html = '';
-    if (!results || results.length === 0) {
-      html = '<div class="alert alert-warning">ไม่มีผู้ลาในวันที่ระบุ</div>';
-    } else {
-      html = '<ul class="list-group">';
-      results.forEach(r => {
-        html += `<li class="list-group-item"><strong>${r.name}</strong> (${r.group})<br><small>ประเภท: ${r.leaveCode} | ลาตรวจ: ${r.exam}</small></li>`;
-      });
-      html += '</ul>';
-    }
-    document.getElementById('search-results').innerHTML = html;
-  }
-</script>
-</body>
-</html>
+    durations.
