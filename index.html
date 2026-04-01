@@ -99,27 +99,34 @@
     return `${y}-${m}-${d}`;
   }
 
-  async function callAPI(action, data = {}) {
+async function callAPI(action, data = {}) {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 
+          'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก ห้ามเปลี่ยนเป็น application/json
+        },
+        redirect: 'follow', // เพิ่มบรรทัดนี้ เพื่อให้ตาม URL ไปยังเซิร์ฟเวอร์ย่อยของ Google
         body: JSON.stringify({ action: action, ...data })
       });
-      return await response.json();
+      
+      // ตรวจสอบว่า Google ส่งหน้า HTML แจ้ง Error กลับมาแทนที่จะเป็น JSON หรือไม่
+      const responseText = await response.text();
+      try {
+        return JSON.parse(responseText);
+      } catch (parseErr) {
+        console.error("เซิร์ฟเวอร์ไม่ได้ตอบกลับเป็น JSON:", responseText);
+        alert('เชื่อมต่อฐานข้อมูลไม่ได้ (อาจตั้งค่า Deploy ผิด หรือ URL ผิด)');
+        return null;
+      }
+      
     } catch (error) {
       console.error('API Error:', error);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
       return null;
     }
   }
-
-  window.onload = async function() {
-    const data = await callAPI('getSystemData');
-    if (data) systemData = data;
-    // ป้องกันการเลือกย้อนหลังทันทีที่โหลดหน้า
-    setupLeaveRules(); 
-  };
-
+  
   function showView(viewId) {
     document.querySelectorAll('.container > div').forEach(el => el.classList.add('hidden'));
     document.getElementById(viewId).classList.remove('hidden');
