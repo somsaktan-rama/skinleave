@@ -1,20 +1,17 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบลางาน สาขาวิชาผิวหนัง</title>
+  <title>ระบบลางาน สาขาวิชาโรคผิวหนัง</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; }
     .card { border-radius: 12px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
     .hidden { display: none !important; }
     .app-header { background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); color: white; padding: 20px; border-radius: 0 0 20px 20px; }
     .exam-row { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #0d6efd; }
-    
-    /* Flex Message Style */
     .flex-card { background: white; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; max-width: 350px; margin: 0 auto; }
     .flex-header { background-color: #00b900; color: white; padding: 15px; text-align: center; font-weight: bold; }
     .flex-body { padding: 20px; }
@@ -30,11 +27,13 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ระบบลางานออนไลน์</h4>
-        <span class="text-muted">สาขาวิชาผิวหนัง</span>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง</span>
     </div>
+    <div id="line-status" class="text-center small text-success mb-3"></div>
+
     <div class="mb-3">
-      <label class="form-label small">รหัสบุคคล</label>
-      <input type="text" id="login-id" class="form-control form-control-lg" placeholder="เช่น 12345">
+      <label class="form-label small">RamaID (รวมเลข 0 นำหน้า)</label>
+      <input type="text" id="login-id" class="form-control form-control-lg" placeholder="เช่น 012345">
     </div>
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
     <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">ค้นหาข้อมูลการลา</button>
@@ -89,7 +88,6 @@
 
   <div id="view-confirm" class="hidden">
     <div class="alert alert-info small text-center mb-3">ตรวจสอบความถูกต้องและบันทึกหน้าจอไว้ก่อนยืนยัน</div>
-    
     <div class="flex-card mb-4" id="flex-capture">
         <div class="flex-header">ใบขออนุมัติลางาน</div>
         <div class="flex-body">
@@ -109,7 +107,6 @@
             <span id="f-time"></span>
         </div>
     </div>
-
     <div class="d-flex flex-column gap-2">
         <button class="btn btn-success btn-lg" id="btn-submit" onclick="submitLeave()">ยืนยันและส่งข้อมูล</button>
         <button class="btn btn-link text-secondary" onclick="showView('view-exam')">แก้ไขข้อมูล</button>
@@ -127,63 +124,110 @@
 
 <script>
   // ==========================================
-  const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
-  const MY_LIFF_ID = '2009672880-fTIAHxNE';
+  // 1. นำ URL ของ Web App Google Apps Script มาวาง
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwSMbzZZJL5AWfoXCnRg4jDDPJNNZ-o3-faCNokPUJEgOvBY696nyJBTJpq-4KRbUpL/exec'; 
+  
+  // 2. นำ LIFF ID จาก LINE Developers มาวาง
+    const MY_LIFF_ID = '2009672880-fTIAHxNE';
   // ==========================================
 
-
   let currentUser = null;
-  let lineData = { uid: null, displayName: null }; // ตัวแปรเก็บข้อมูล LINE
+  let systemData = { holidays: [], leaveTypes: [] };
+  let calculatedLeaveDays = [];
+  
+  // ตัวแปรสำหรับเก็บข้อมูล LINE (เตรียมไว้กัน Error)
+  let lineProfile = { uid: '', displayName: '' }; 
 
-  // ฟังก์ชันเริ่มต้น LIFF เมื่อโหลดหน้าเว็บ
-  window.onload = async function() {
+  // ฟังก์ชันจัดรูปแบบวันที่
+  function formatDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // ฟังก์ชันยิง API ไปหา Google Sheets
+  async function callAPI(action, data = {}) {
     try {
-      await liff.init({ liffId: MY_LIFF_ID });
-      if (liff.isLoggedIn()) {
-        const profile = await liff.getProfile();
-        lineData.uid = profile.userId;
-        lineData.displayName = profile.displayName;
-        console.log("เชื่อมต่อ LINE สำเร็จ:", lineData.displayName);
-      } else {
-        // หากไม่ได้เปิดใน LINE หรือยังไม่ล็อกอิน สามารถเลือกให้ liff.login() ได้
-        // liff.login(); 
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify({ action: action, ...data })
+      });
+      const responseText = await response.text();
+      return JSON.parse(responseText);
+    } catch (error) {
+      console.error('API Error:', error);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      return null;
+    }
+  }
+
+  // เมื่อโหลดหน้าเว็บเสร็จ
+  window.onload = async function() {
+    // พยายามเชื่อมต่อ LIFF
+    try {
+      if(MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
+        await liff.init({ liffId: MY_LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          lineProfile.uid = profile.userId;
+          lineProfile.displayName = profile.displayName;
+          document.getElementById('line-status').innerText = 'เชื่อมต่อ LINE: ' + lineProfile.displayName;
+        }
       }
     } catch (err) {
-      console.error("LIFF Initialization failed", err);
+      console.error("LIFF Init Error:", err);
     }
 
+    // โหลดข้อมูลจาก Google Sheet
     const data = await callAPI('getSystemData');
     if (data) systemData = data;
     setupLeaveRules(); 
   };
 
-  async function doLogin() {
-    const id = document.getElementById('login-id').value;
-    if (!id) return alert('กรุณากรอก RamaID');
-    
-    const btn = document.getElementById('btn-login');
-    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
-    
-    // ส่งค่า ramaId พร้อมกับข้อมูล LINE ไปที่ Backend
-    const result = await callAPI('login', { 
-      ramaId: id, 
-      lineUid: lineData.uid, 
-      lineDisplayName: lineData.displayName 
-    });
-    
-    btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
+  function showView(viewId) {
+    document.querySelectorAll('.container > div').forEach(el => el.classList.add('hidden'));
+    document.getElementById(viewId).classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
 
-    if (result && result.success) {
-      currentUser = result.data;
-      document.getElementById('display-name').innerText = currentUser.name;
-      document.getElementById('display-group').innerText = currentUser.group;
-      document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
-      showView('view-main');
-    } else if (result) {
-      alert(result.message);
+  // --- จุดที่อาจจะเกิด Error ได้แก้ไขแล้ว ---
+  async function doLogin() {
+    try {
+      const id = document.getElementById('login-id').value;
+      if (!id) return alert('กรุณากรอก RamaID');
+      
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true; 
+      btn.innerText = 'กำลังตรวจสอบ...';
+      
+      const result = await callAPI('login', { 
+        ramaId: id,
+        lineUid: lineProfile.uid,
+        lineDisplayName: lineProfile.displayName
+      });
+      
+      btn.disabled = false; 
+      btn.innerText = 'เข้าสู่ระบบ';
+      
+      if (result && result.success) {
+        currentUser = result.data;
+        document.getElementById('display-name').innerText = currentUser.name;
+        document.getElementById('display-group').innerText = currentUser.group;
+        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
+        showView('view-main');
+      } else if (result) { 
+        alert(result.message); 
+      }
+    } catch(err) {
+      alert("มีข้อผิดพลาดในระบบ: " + err.message);
+      document.getElementById('btn-login').disabled = false;
+      document.getElementById('btn-login').innerText = 'เข้าสู่ระบบ';
     }
   }
-  
+
   function logout() { currentUser = null; document.getElementById('login-id').value = ''; showView('view-login'); }
 
   function setupLeaveRules() {
@@ -220,7 +264,7 @@
       hint.innerText = 'เลือกได้: 7 วันข้างหน้า - 6 เดือนข้างหน้า'; for(let i=1; i<=15; i++) durations.push(i);
     } else if (type === 'ตรวจ') {
       minDate = today; 
-      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12);
+	        maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12);
       hint.innerText = 'เลือกได้: วันนี้ - 1 ปีข้างหน้า'; durations = [1];
     }
 
@@ -234,32 +278,26 @@
     durationInput.disabled = false; btnNext.disabled = false;
   }
 
-  // --- ฟังก์ชันดักจับ Mobile ที่เลือกวันที่ย้อนหลัง ---
   function checkDateValidity() {
     const dateInput = document.getElementById('leave-date');
     if (!dateInput.value) return;
-
     const selectedDateStr = dateInput.value;
     const minDateStr = dateInput.min;
     const maxDateStr = dateInput.max;
-
     if (minDateStr && selectedDateStr < minDateStr) {
       alert('ไม่อนุญาตให้เลือกวันที่ย้อนหลัง หรือก่อนเงื่อนไขที่กำหนดครับ');
-      dateInput.value = ''; // ล้างค่าทิ้งทันที
+      dateInput.value = '';
     } else if (maxDateStr && selectedDateStr > maxDateStr) {
       alert('ไม่อนุญาตให้เลือกวันที่เกินเงื่อนไขที่กำหนดครับ');
-      dateInput.value = ''; // ล้างค่าทิ้งทันที
+      dateInput.value = '';
     }
   }
 
-  // --- ฟังก์ชันข้ามวันหยุด (เสาร์-อาทิตย์ และ holiday) ---
   function getWorkingDays(startDateStr, duration) {
     let days = [];
     let currentDate = new Date(startDateStr);
     let daysNeeded = Math.ceil(duration);
     let safetyNet = 0; 
-    
-    // ตรวจสอบว่ามีข้อมูลวันหยุดในระบบหรือไม่
     const safeHolidays = systemData.holidays || [];
 
     while (days.length < daysNeeded && safetyNet < 100) {
@@ -267,14 +305,9 @@
       let dStr = formatDateStr(currentDate);
       let dayOfWeek = currentDate.getDay(); 
       let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-      
-      // เช็คว่าวันที่นี้ตรงกับวันหยุดนักขัตฤกษ์ใน Sheet หรือไม่
       let isHoliday = safeHolidays.includes(dStr);
       
-      if (!isWeekend && !isHoliday) { 
-          days.push(dStr); 
-      }
-      // บวกเพิ่มไปอีก 1 วัน
+      if (!isWeekend && !isHoliday) { days.push(dStr); }
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return days;
@@ -287,8 +320,7 @@
     if (!startDate) return alert('กรุณาเลือกวันที่');
     
     calculatedLeaveDays = getWorkingDays(startDate, duration);
-    
-    if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้ (อาจตรงกับวันหยุดทั้งหมด)');
+    if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้');
 
     const container = document.getElementById('exam-list-container');
     container.innerHTML = '';
@@ -354,7 +386,6 @@
     }
     document.getElementById('search-results').innerHTML = html;
   }
-
 </script>
 </body>
 </html>
