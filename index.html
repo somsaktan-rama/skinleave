@@ -39,13 +39,36 @@
     <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">ค้นหาข้อมูลการลา</button>
   </div>
 
-  <div id="view-main" class="hidden">
+<div id="view-main" class="hidden">
     <div class="app-header text-center mb-4">
       <h5 id="display-name" class="mb-1">ชื่อ-สกุล</h5>
       <div class="mb-2"><span class="badge bg-light text-primary" id="display-group">Group</span></div>
       <small id="display-rama-id" class="opacity-75"></small>
     </div>
     
+    <div class="card p-3 mb-3">
+      <div class="mb-3">
+        <label class="fw-bold">ประเภทการลา</label>
+        <select id="leave-type" class="form-select" onchange="setupLeaveRules()">
+           </select>
+      </div>
+      
+      <button class="btn btn-primary btn-lg w-100" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป</button>
+    </div>
+    
+    <button class="btn btn-info w-100 mb-3 text-white" style="background-color: #0dcaf0; border: none;" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
+
+    <button class="btn btn-light text-danger w-100" onclick="logout()">ออกจากระบบ</button>
+  </div>
+
+<div id="view-my-leave" class="hidden">
+    <div class="card p-3 mb-3 shadow-sm border-0">
+      <h5 class="fw-bold mb-3 text-info">📅 รายการลาที่กำลังจะมาถึง</h5>
+      <div id="my-leave-results"></div>
+      <button class="btn btn-outline-secondary w-100 mt-4" onclick="showView('view-main')">ย้อนกลับ</button>
+    </div>
+  </div>	
+	
     <div class="card p-3 mb-3">
       <div class="mb-3">
         <label class="fw-bold">ประเภทการลา</label>
@@ -71,17 +94,7 @@
         <label class="fw-bold">จำนวนวันลา</label>
         <select id="leave-duration" class="form-select" disabled></select>
       </div>
-
       <button class="btn btn-primary btn-lg w-100" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป</button>
-
-		<button class="btn btn-info w-100 mt-2 mb-3 text-white" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
-<div id="view-my-leave" class="hidden">
-  <div class="card p-3">
-    <h5 class="fw-bold mb-3">รายการวันลาที่กำลังจะมาถึง</h5>
-    <div id="my-leave-results"></div>
-    <button class="btn btn-secondary w-100 mt-4" onclick="showView('view-main')">กลับหน้าหลัก</button>
-  </div>
-	
 </div>
 		
     </div>
