@@ -136,25 +136,46 @@
     });
   }
 
-  // ฟังก์ชันค้นหาและกรองข้อมูล
+// ฟังก์ชันค้นหาและกรองข้อมูล (อัปเดตแยกกลุ่มย่อยชัดเจน)
   function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const groupFilter = document.getElementById('groupFilter').value; // ดึงค่าจาก Dropdown ที่อัปเดตใหม่
+    const groupFilter = document.getElementById('groupFilter').value; 
 
-    // กรองข้อมูลจาก Array ต้นฉบับ
     const filteredData = allData.filter(row => {
-      // เงื่อนไขค้นหาข้อความ (ครอบคลุมทั้งชื่อและรหัส)
+      // 1. เงื่อนไขค้นหาข้อความ (คลุมชื่อและรหัส)
       const matchSearch = row.name.toLowerCase().includes(searchText) || row.ramaID.includes(searchText);
       
-      // เงื่อนไขกรองกลุ่ม (ถ้าเลือก "แสดงทุกกลุ่ม" จะได้ค่าว่าง "" ซึ่งจะข้ามเงื่อนไขนี้ไป)
-      const matchGroup = groupFilter === "" || row.group === groupFilter;
+      // 2. เงื่อนไขกรองกลุ่มแบบระบุ Sub-group
+      let matchGroup = false;
+      let userGroup = row.group.trim(); // ตัดช่องว่างกันพลาด
+
+      if (groupFilter === "") {
+        // แสดงทุกกลุ่ม
+        matchGroup = true;
+      } 
+      else if (groupFilter === "อาจารย์") {
+        // ป้องกันดึง 'แพทย์ผู้ช่วยอาจารย์' ติดมาด้วย โดยระบุชื่อตรงๆ
+        matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ"].includes(userGroup);
+      } 
+      else if (groupFilter === "แพทย์ประจำบ้าน") {
+        // ดึงเฉพาะแพทย์ประจำบ้านปี 2, 3, 4
+        matchGroup = ["แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4"].includes(userGroup);
+      } 
+      else if (groupFilter === "แพทย์ผู้ช่วย") {
+        // ดึงเฉพาะแพทย์ผู้ช่วยวิจัย และ แพทย์ผู้ช่วยอาจารย์
+        matchGroup = ["แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup);
+      }
+      else {
+        // สำหรับกลุ่มอื่นๆ (เช่น เจ้าหน้าที่) ให้เทียบชื่อให้ตรงกันพอดี
+        matchGroup = userGroup === groupFilter;
+      }
       
       return matchSearch && matchGroup;
     });
 
-    // นำข้อมูลที่ผ่านการกรองไปวาดตารางใหม่
     renderTable(filteredData);
-  }
+  }  
+  
 </script>
 </body>
 </html>
