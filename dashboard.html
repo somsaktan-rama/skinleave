@@ -1,1 +1,144 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard ภาพรวมการลา</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; }
+    .header-panel { background: linear-gradient(135deg, #20c997 0%, #12a378 100%); color: white; padding: 20px; border-radius: 0 0 15px 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow-x: auto; }
+    .badge-leave { font-size: 0.85em; padding: 5px 10px; }
+    th { white-space: nowrap; background-color: #f1f4f9 !important; }
+    td { vertical-align: middle; white-space: nowrap; }
+    .timestamp-text { font-size: 0.8em; color: #888; }
+  </style>
+</head>
+<body>
 
+<div class="container-fluid mt-2 mb-5">
+  <div class="header-panel text-center">
+    <h3 class="fw-bold mb-0">📊 Dashboard ภาพรวมการลา</h3>
+    <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลาตั้งแต่วันปัจจุบันเป็นต้นไป</p>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-6 mb-2">
+      <input type="text" id="searchInput" class="form-control" placeholder="🔍 ค้นหา ชื่อ, รหัส RamaID..." onkeyup="filterTable()">
+    </div>
+    <div class="col-md-6 mb-2">
+      <select id="groupFilter" class="form-select" onchange="filterTable()">
+        <option value="">-- กรองทุกกลุ่ม --</option>
+        <option value="แพทย์ประจำบ้าน">แพทย์ประจำบ้าน</option>
+        <option value="แพทย์ผู้ช่วย">แพทย์ผู้ช่วย</option>
+        <option value="อาจารย์">อาจารย์</option>
+        <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
+        </select>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div id="loading" class="text-center py-4 text-muted">กำลังโหลดข้อมูล...</div>
+    
+    <table class="table table-hover d-none" id="dashboardTable">
+      <thead>
+        <tr>
+          <th>วันที่ลา (Leave Date)</th>
+          <th>รหัส (Rama ID)</th>
+          <th>ชื่อ-สกุล (Name)</th>
+          <th>กลุ่ม (Group)</th>
+          <th>ประเภท (Leave)</th>
+          <th>ช่วงเวลา (Exam)</th>
+          <th>ชื่อ LINE</th>
+          <th>เวลาบันทึก (Timestamp)</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        </tbody>
+    </table>
+    <div id="noData" class="alert alert-warning text-center d-none mt-3">ไม่มีรายการลาที่กำลังจะมาถึง</div>
+  </div>
+</div>
+
+<script>
+  // ==========================================
+  // 📍 นำ URL ของ Web App อันเดียวกันกับ index.html มาวางที่นี่
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyIfJWYnZ3FAe8gfYB3Tb3OY8moqR2lJOHUUYq6UFJrzcTve3dtlf6S7JOBkWwgsVIB/exec'; 
+  // ==========================================
+
+  let allData = [];
+
+  window.onload = async function() {
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify({ action: 'getDashboardData' })
+      });
+      const data = await response.json();
+      allData = data;
+      renderTable(allData);
+    } catch (error) {
+      document.getElementById('loading').innerHTML = '<span class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</span>';
+      console.error(error);
+    }
+  };
+
+  function renderTable(data) {
+    document.getElementById('loading').classList.add('d-none');
+    const tbody = document.getElementById('tableBody');
+    const table = document.getElementById('dashboardTable');
+    const noData = document.getElementById('noData');
+    
+    tbody.innerHTML = '';
+
+    if (data.length === 0) {
+      table.classList.add('d-none');
+      noData.classList.remove('d-none');
+      return;
+    }
+
+    table.classList.remove('d-none');
+    noData.classList.add('d-none');
+
+    data.forEach(row => {
+      // กำหนดสีป้ายตามประเภทการลา
+      let badgeClass = 'bg-secondary';
+      if(row.leaveCode === 'ป่วย') badgeClass = 'bg-danger';
+      else if(row.leaveCode === 'กิจ') badgeClass = 'bg-warning text-dark';
+      else if(row.leaveCode === 'พักผ่อน') badgeClass = 'bg-success';
+      else if(row.leaveCode === 'เรียนเลือก' || row.leaveCode === 'ประชุม') badgeClass = 'bg-info text-dark';
+      else if(row.leaveCode === 'ต่างประเทศ') badgeClass = 'bg-primary';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="fw-bold text-primary">${row.leaveDate}</td>
+        <td>${row.ramaID}</td>
+        <td class="fw-bold">${row.name}</td>
+        <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
+        <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
+        <td>${row.exam}</td>
+        <td class="text-success small">${row.lineDisplayName}</td>
+        <td class="timestamp-text">${row.timestamp}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function filterTable() {
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+    const groupFilter = document.getElementById('groupFilter').value;
+
+    const filteredData = allData.filter(row => {
+      const matchSearch = row.name.toLowerCase().includes(searchText) || row.ramaID.includes(searchText);
+      const matchGroup = groupFilter === "" || row.group === groupFilter;
+      return matchSearch && matchGroup;
+    });
+
+    renderTable(filteredData);
+  }
+</script>
+</body>
+</html>
