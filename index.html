@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบลางาน สาขาวิชาโรคผิวหนัง</title>
+  <title>ระบบลางาน สาขาวิชาผิวหนัง</title>
+  
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
   <style>
     body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; }
     .card { border-radius: 12px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
     .hidden { display: none !important; }
     .app-header { background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); color: white; padding: 20px; border-radius: 0 0 20px 20px; }
     .exam-row { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #0d6efd; }
+    
+    /* Flex Message Style */
     .flex-card { background: white; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; max-width: 350px; margin: 0 auto; }
     .flex-header { background-color: #00b900; color: white; padding: 15px; text-align: center; font-weight: bold; }
     .flex-body { padding: 20px; }
@@ -24,22 +28,25 @@
 <body>
 
 <div class="container mt-3 mb-5" id="app">
+  
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ระบบลางานออนไลน์</h4>
         <span class="text-muted">สาขาวิชาโรคผิวหนัง</span>
     </div>
-    <div id="line-status" class="text-center small text-success mb-3"></div>
+    
+    <div id="line-status" class="text-center small text-success mb-3">ตรวจสอบสถานะ LINE...</div>
 
     <div class="mb-3">
-      <label class="form-label small">RamaID (รวมเลข 0 นำหน้า)</label>
+      <label class="form-label small">รหัสบุคคล RamaID</label>
       <input type="text" id="login-id" class="form-control form-control-lg" placeholder="เช่น 012345">
     </div>
+    
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
     <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">ค้นหาข้อมูลการลา</button>
   </div>
 
-<div id="view-main" class="hidden">
+  <div id="view-main" class="hidden">
     <div class="app-header text-center mb-4">
       <h5 id="display-name" class="mb-1">ชื่อ-สกุล</h5>
       <div class="mb-2"><span class="badge bg-light text-primary" id="display-group">Group</span></div>
@@ -47,40 +54,18 @@
     </div>
     
     <div class="card p-3 mb-3">
-      <div class="mb-3">
-        <label class="fw-bold">ประเภทการลา</label>
-        <select id="leave-type" class="form-select" onchange="setupLeaveRules()">
-           </select>
-      </div>
-      
-      <button class="btn btn-primary btn-lg w-100" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป</button>
-    </div>
-    
-    <button class="btn btn-info w-100 mb-3 text-white" style="background-color: #0dcaf0; border: none;" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
-
-    <button class="btn btn-light text-danger w-100" onclick="logout()">ออกจากระบบ</button>
-  </div>
-
-<div id="view-my-leave" class="hidden">
-    <div class="card p-3 mb-3 shadow-sm border-0">
-      <h5 class="fw-bold mb-3 text-info">📅 รายการลาที่กำลังจะมาถึง</h5>
-      <div id="my-leave-results"></div>
-      <button class="btn btn-outline-secondary w-100 mt-4" onclick="showView('view-main')">ย้อนกลับ</button>
-    </div>
-  </div>	
-	
-    <div class="card p-3 mb-3">
+      <h5 class="fw-bold text-primary mb-3">กรอกแบบฟอร์มการลา</h5>
       <div class="mb-3">
         <label class="fw-bold">ประเภทการลา</label>
         <select id="leave-type" class="form-select" onchange="setupLeaveRules()">
           <option value="">-- เลือกประเภท --</option>
-          <option value="ป่วย">ป่วย</option>
-          <option value="กิจ">กิจ</option>
-          <option value="พักผ่อน">พักผ่อน</option>
-          <option value="เรียนเลือก">เรียนเลือก</option>
-          <option value="ประชุม">ประชุม</option>
-          <option value="ต่างประเทศ">ต่างประเทศ</option>
-          <option value="ตรวจ">ตรวจ</option>
+          <option value="ป่วย">ลาป่วย</option>
+          <option value="กิจ">ลากิจ</option>
+          <option value="พักผ่อน">ลาพักผ่อน</option>
+          <option value="เรียนเลือก">ลาเรียนเลือก elective</option>
+          <option value="ประชุม">ลาประชุมในประเทศ</option>
+          <option value="ต่างประเทศ">ลาไปต่างประเทศ</option>
+          <option value="ตรวจ">ลาตรวจคลนิก</option>
         </select>
       </div>
       
@@ -94,15 +79,25 @@
         <label class="fw-bold">จำนวนวันลา</label>
         <select id="leave-duration" class="form-select" disabled></select>
       </div>
-      <button class="btn btn-primary btn-lg w-100" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป</button>
-</div>
-		
+
+      <button class="btn btn-primary btn-lg w-100 mb-2" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป (ระบุช่วงเวลาลาตรวจคลินิก)</button>
     </div>
-    <button class="btn btn-light text-danger w-100" onclick="logout()">ออกจากระบบ</button>
+    
+    <button class="btn btn-info w-100 mb-3 text-white" style="background-color: #0dcaf0; border: none;" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
+
+    <button class="btn btn-light text-danger w-100 shadow-sm" onclick="logout()">ออกจากระบบ</button>
+  </div>
+
+  <div id="view-my-leave" class="hidden">
+    <div class="card p-3 mb-3 shadow-sm border-0">
+      <h5 class="fw-bold mb-3 text-info">📅 รายการลาที่กำลังจะมาถึง</h5>
+      <div id="my-leave-results"></div>
+      <button class="btn btn-outline-secondary w-100 mt-4" onclick="showView('view-main')">ย้อนกลับ</button>
+    </div>
   </div>
 
   <div id="view-exam" class="hidden">
-    <div class="p-2 mb-3"><h5 class="fw-bold">ระบุช่วงเวลาลาตรวจ</h5></div>
+    <div class="p-2 mb-3"><h5 class="fw-bold">ระบุช่วงเวลาลาตรวจคลินิก</h5></div>
     <div id="exam-list-container"></div>
     <div class="d-flex gap-2 mt-4">
       <button class="btn btn-outline-secondary flex-grow-1" onclick="showView('view-main')">ย้อนกลับ</button>
@@ -112,6 +107,7 @@
 
   <div id="view-confirm" class="hidden">
     <div class="alert alert-info small text-center mb-3">ตรวจสอบความถูกต้องและบันทึกหน้าจอไว้ก่อนยืนยัน</div>
+    
     <div class="flex-card mb-4" id="flex-capture">
         <div class="flex-header">ใบขออนุมัติลางาน</div>
         <div class="flex-body">
@@ -122,7 +118,7 @@
             <div class="flex-item"><span class="flex-label">เริ่มวันที่</span><span class="flex-value" id="f-start">-</span></div>
             <div class="flex-item"><span class="flex-label">รวม</span><span class="flex-value" id="f-dur">-</span></div>
             <div class="mt-3 p-2 bg-light rounded" style="font-size:12px;">
-                <strong>รายละเอียดช่วงเวลาลาตรวจ:</strong>
+                <strong>รายละเอียดช่วงเวลาลาตรวจคลินิก:</strong>
                 <div id="f-exams" class="mt-1"></div>
             </div>
         </div>
@@ -131,8 +127,9 @@
             <span id="f-time"></span>
         </div>
     </div>
+
     <div class="d-flex flex-column gap-2">
-        <button class="btn btn-success btn-lg" id="btn-submit" onclick="submitLeave()">ยืนยันและส่งข้อมูล</button>
+        <button class="btn btn-success btn-lg shadow-sm" id="btn-submit" onclick="submitLeave()">ยืนยันและส่งข้อมูล</button>
         <button class="btn btn-link text-secondary" onclick="showView('view-exam')">แก้ไขข้อมูล</button>
     </div>
   </div>
@@ -144,25 +141,24 @@
     <div id="search-results"></div>
     <hr><button class="btn btn-secondary w-100" onclick="showView('view-login')">กลับหน้าแรก</button>
   </div>
+
 </div>
 
 <script>
-  // ==========================================
-  // 1. นำ URL ของ Web App Google Apps Script มาวาง
+  // 📍 1. แก้ไข 2 บรรทัดนี้ให้เป็นข้อมูลของคุณ 📍
+ // 1. นำ URL ของ Web App Google Apps Script มาวาง
     const API_URL = 'https://script.google.com/macros/s/AKfycbyIfJWYnZ3FAe8gfYB3Tb3OY8moqR2lJOHUUYq6UFJrzcTve3dtlf6S7JOBkWwgsVIB/exec'; 
   
   // 2. นำ LIFF ID จาก LINE Developers มาวาง
     const MY_LIFF_ID = '2009672880-fTIAHxNE';
-  // ==========================================
+   // ============================================
 
   let currentUser = null;
   let systemData = { holidays: [], leaveTypes: [] };
   let calculatedLeaveDays = [];
-  
-  // ตัวแปรสำหรับเก็บข้อมูล LINE (เตรียมไว้กัน Error)
   let lineProfile = { uid: '', displayName: '' }; 
 
-  // ฟังก์ชันจัดรูปแบบวันที่
+  // --- ฟังก์ชันช่วยเหลือ (Helpers) ---
   function formatDateStr(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -170,7 +166,12 @@
     return `${y}-${m}-${d}`;
   }
 
-  // ฟังก์ชันยิง API ไปหา Google Sheets
+  function showView(viewId) {
+    document.querySelectorAll('.container > div[id^="view-"]').forEach(el => el.classList.add('hidden'));
+    document.getElementById(viewId).classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
+
   async function callAPI(action, data = {}) {
     try {
       const response = await fetch(API_URL, {
@@ -188,9 +189,8 @@
     }
   }
 
-  // เมื่อโหลดหน้าเว็บเสร็จ
+  // --- เริ่มต้นระบบ (Initialize) ---
   window.onload = async function() {
-    // พยายามเชื่อมต่อ LIFF
     try {
       if(MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
         await liff.init({ liffId: MY_LIFF_ID });
@@ -198,62 +198,91 @@
           const profile = await liff.getProfile();
           lineProfile.uid = profile.userId;
           lineProfile.displayName = profile.displayName;
-          document.getElementById('line-status').innerText = 'เชื่อมต่อ LINE: ' + lineProfile.displayName;
+          document.getElementById('line-status').innerText = '✅ เชื่อมต่อ LINE: ' + lineProfile.displayName;
+        } else {
+          document.getElementById('line-status').innerText = '⚠️ กรุณาเปิดผ่านแอป LINE เพื่อเชื่อมต่อ';
         }
+      } else {
+         document.getElementById('line-status').innerText = ''; // ซ่อนหากยังไม่ใส่ LIFF ID
       }
     } catch (err) {
       console.error("LIFF Init Error:", err);
+      document.getElementById('line-status').innerText = '❌ เกิดข้อผิดพลาดในการเชื่อมต่อ LINE';
     }
 
-    // โหลดข้อมูลจาก Google Sheet
     const data = await callAPI('getSystemData');
     if (data) systemData = data;
     setupLeaveRules(); 
   };
 
-  function showView(viewId) {
-    document.querySelectorAll('.container > div').forEach(el => el.classList.add('hidden'));
-    document.getElementById(viewId).classList.remove('hidden');
-    window.scrollTo(0,0);
-  }
-
-  // --- จุดที่อาจจะเกิด Error ได้แก้ไขแล้ว ---
-async function doLogin() {
+  // --- ฟังก์ชันระบบสมาชิก (Auth) ---
+  async function doLogin() {
     try {
       const id = document.getElementById('login-id').value;
       if (!id) return alert('กรุณากรอก RamaID');
       
       const btn = document.getElementById('btn-login');
-      btn.disabled = true; 
-      btn.innerText = 'กำลังตรวจสอบ...';
+      btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
       
-      // ตรวจสอบว่า lineProfile.uid มีค่าจริงก่อนส่ง
-      console.log("ส่งข้อมูล Login:", id, lineProfile.uid, lineProfile.displayName);
-
       const result = await callAPI('login', { 
         ramaId: id,
-        lineUid: lineProfile.uid, // ต้องตรงกับที่ backend รับ
-        lineDisplayName: lineProfile.displayName // ต้องตรงกับที่ backend รับ
+        lineUid: lineProfile.uid,
+        lineDisplayName: lineProfile.displayName
       });
       
-      btn.disabled = false; 
-      btn.innerText = 'เข้าสู่ระบบ';
+      btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
       
       if (result && result.success) {
-        // ... โค้ดเดิม ...
+        currentUser = result.data;
+        document.getElementById('display-name').innerText = currentUser.name;
+        document.getElementById('display-group').innerText = currentUser.group;
+        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
         showView('view-main');
       } else if (result) { 
         alert(result.message); 
       }
     } catch(err) {
-      alert("Error: " + err.message);
+      alert("มีข้อผิดพลาด: " + err.message);
       document.getElementById('btn-login').disabled = false;
       document.getElementById('btn-login').innerText = 'เข้าสู่ระบบ';
     }
   }
-	
-  function logout() { currentUser = null; document.getElementById('login-id').value = ''; showView('view-login'); }
 
+  function logout() { 
+    currentUser = null; 
+    document.getElementById('login-id').value = ''; 
+    showView('view-login'); 
+  }
+
+  // --- ฟังก์ชันวันลาของฉัน (My Leaves) ---
+  async function loadMyLeaves() {
+    const resultsDiv = document.getElementById('my-leave-results');
+    resultsDiv.innerHTML = '<p class="text-center">กำลังโหลดข้อมูล...</p>';
+    showView('view-my-leave');
+
+    const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+    
+    if (!results || results.length === 0) {
+      resultsDiv.innerHTML = '<div class="alert alert-light text-center border">คุณไม่มีรายการลาที่กำลังจะมาถึง</div>';
+      return;
+    }
+
+    let html = '<div class="list-group shadow-sm">';
+    results.forEach(item => {
+      html += `
+        <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
+          <div class="d-flex justify-content-between">
+            <span class="fw-bold text-primary">${item.leaveDate}</span>
+            <span class="badge bg-warning text-dark">${item.leaveCode}</span>
+          </div>
+          <div class="small mt-1 text-muted">ช่วงเวลาลาตรวจ: ${item.exam}</div>
+        </div>`;
+    });
+    html += '</div>';
+    resultsDiv.innerHTML = html;
+  }
+
+  // --- ฟังก์ชันกฎการลา (Leave Rules) ---
   function setupLeaveRules() {
     const type = document.getElementById('leave-type').value;
     const dateInput = document.getElementById('leave-date');
@@ -261,7 +290,10 @@ async function doLogin() {
     const btnNext = document.getElementById('btn-next');
     const hint = document.getElementById('date-hint');
     dateInput.value = ''; durationInput.innerHTML = '';
-    if (!type) { dateInput.disabled = true; durationInput.disabled = true; btnNext.disabled = true; return; }
+    
+    if (!type) { 
+      dateInput.disabled = true; durationInput.disabled = true; btnNext.disabled = true; hint.innerText = ''; return; 
+    }
 
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -288,7 +320,7 @@ async function doLogin() {
       hint.innerText = 'เลือกได้: 7 วันข้างหน้า - 6 เดือนข้างหน้า'; for(let i=1; i<=15; i++) durations.push(i);
     } else if (type === 'ตรวจ') {
       minDate = today; 
-	        maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12);
+	  maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12);
       hint.innerText = 'เลือกได้: วันนี้ - 1 ปีข้างหน้า'; durations = [1];
     }
 
@@ -337,6 +369,7 @@ async function doLogin() {
     return days;
   }
 
+  // --- ฟังก์ชันบันทึกข้อมูล (Submit Flow) ---
   function prepareExamSelection() {
     const startDate = document.getElementById('leave-date').value;
     const duration = parseFloat(document.getElementById('leave-duration').value);
@@ -384,60 +417,49 @@ async function doLogin() {
   async function submitLeave() {
     const btn = document.getElementById('btn-submit');
     btn.disabled = true; btn.innerText = 'กำลังส่ง...';
+    
     let examDetails = [];
     document.querySelectorAll('.exam-row').forEach(row => {
       let date = row.getAttribute('data-date');
       let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
       examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
     });
+    
     const res = await callAPI('submitLeave', { data: {
       user: currentUser, leaveCode: document.getElementById('leave-type').value,
       startDate: document.getElementById('leave-date').value, examDetails: examDetails
     }});
+    
     btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล';
-    if(res && res.success) { alert('ส่งข้อมูลสำเร็จ'); showView('view-main'); }
+    if(res && res.success) { 
+      alert('ส่งข้อมูลสำเร็จ'); 
+      showView('view-main'); 
+      document.getElementById('leave-date').value = ''; 
+      setupLeaveRules(); // Reset form
+    }
   }
 
+  // --- ฟังก์ชันค้นหา (Search) ---
   async function executeSearch() {
     const date = document.getElementById('search-date').value;
     if (!date) return alert('กรุณาเลือกวันที่');
-    document.getElementById('search-results').innerHTML = 'กำลังค้นหา...';
+    document.getElementById('search-results').innerHTML = '<p class="text-center mt-3">กำลังค้นหา...</p>';
+    
     const results = await callAPI('searchLeave', { date: date });
+    
     let html = '';
-    if (!results || results.length === 0) { html = '<div class="alert alert-warning">ไม่มีผู้ลา</div>'; }
-    else {
-      results.forEach(r => { html += `<div class="card p-2 mb-2"><strong>${r.name}</strong><small>${r.leaveCode} | ${r.exam}</small></div>`; });
+    if (!results || results.length === 0) { 
+      html = '<div class="alert alert-warning mt-3">ไม่มีผู้ลาในวันที่ระบุ</div>'; 
+    } else {
+      html = '<div class="list-group mt-3">';
+      results.forEach(r => { 
+        html += `<div class="list-group-item"><strong>${r.name}</strong> <span class="badge bg-secondary">${r.group}</span><br><small class="text-muted">ลา: ${r.leaveCode} | ตรวจ: ${r.exam}</small></div>`; 
+      });
+      html += '</div>';
     }
     document.getElementById('search-results').innerHTML = html;
   }
-
-	async function loadMyLeaves() {
-  const resultsDiv = document.getElementById('my-leave-results');
-  resultsDiv.innerHTML = '<p class="text-center">กำลังโหลดข้อมูล...</p>';
-  showView('view-my-leave');
-
-  const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
-  
-  if (!results || results.length === 0) {
-    resultsDiv.innerHTML = '<div class="alert alert-light text-center">ไม่มีรายการลาตั้งแต่วันนี้เป็นต้นไป</div>';
-    return;
-  }
-
-  let html = '<div class="list-group shadow-sm">';
-  results.forEach(item => {
-    html += `
-      <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
-        <div class="d-flex justify-content-between">
-          <span class="fw-bold text-primary">${item.leaveDate}</span>
-          <span class="badge bg-warning text-dark">${item.leaveCode}</span>
-        </div>
-        <div class="small mt-1 text-muted">ช่วงเวลาลาตรวจ: ${item.exam}</div>
-      </div>`;
-  });
-  html += '</div>';
-  resultsDiv.innerHTML = html;
-}
-	
 </script>
+
 </body>
 </html>
