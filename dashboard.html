@@ -19,56 +19,64 @@
 
 <div class="container-fluid mt-2 mb-5">
   <div class="header-panel text-center">
-    <h3 class="fw-bold mb-0">📊 Dashboard ภาพรวมการลา</h3>
-    <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลาตั้งแต่วันปัจจุบันเป็นต้นไป</p>
+    <h3 class="fw-bold mb-0">📊 ภาพรวมการลา สาขาวิชาผิวหนัง</h3>
+    <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลาที่กำลังจะมาถึง (นับตั้งแต่วันปัจจุบัน)</p>
   </div>
 
   <div class="row mb-3">
     <div class="col-md-6 mb-2">
-      <input type="text" id="searchInput" class="form-control" placeholder="🔍 ค้นหา ชื่อ, รหัส RamaID..." onkeyup="filterTable()">
+      <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="🔍 ค้นหา ชื่อ หรือ รหัส RamaID..." onkeyup="filterTable()">
     </div>
+    
     <div class="col-md-6 mb-2">
-      <select id="groupFilter" class="form-select" onchange="filterTable()">
-        <option value="">-- กรองทุกกลุ่ม --</option>
+      <select id="groupFilter" class="form-select form-select-lg" onchange="filterTable()">
+        <option value="">-- แสดงทุกกลุ่ม --</option>
+        <option value="อาจารย์">อาจารย์</option>
         <option value="แพทย์ประจำบ้าน">แพทย์ประจำบ้าน</option>
         <option value="แพทย์ผู้ช่วย">แพทย์ผู้ช่วย</option>
-        <option value="อาจารย์">อาจารย์</option>
         <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
-        </select>
+      </select>
     </div>
   </div>
 
   <div class="table-container">
-    <div id="loading" class="text-center py-4 text-muted">กำลังโหลดข้อมูล...</div>
+    <div id="loading" class="text-center py-4 text-muted">
+      <div class="spinner-border text-success mb-2" role="status"></div><br>
+      กำลังโหลดข้อมูล...
+    </div>
     
-    <table class="table table-hover d-none" id="dashboardTable">
-      <thead>
+    <table class="table table-hover d-none align-middle" id="dashboardTable">
+      <thead class="table-light">
         <tr>
-          <th>วันที่ลา (Leave Date)</th>
+          <th>วันที่ลา</th>
           <th>รหัส (Rama ID)</th>
-          <th>ชื่อ-สกุล (Name)</th>
+          <th>ชื่อ-สกุล</th>
           <th>กลุ่ม (Group)</th>
-          <th>ประเภท (Leave)</th>
-          <th>ช่วงเวลา (Exam)</th>
-          <th>ชื่อ LINE</th>
-          <th>เวลาบันทึก (Timestamp)</th>
+          <th>ประเภท</th>
+          <th>ช่วงเวลาตรวจ</th>
+          <th>ชื่อบัญชี LINE</th>
+          <th>เวลาทำรายการ</th>
         </tr>
       </thead>
       <tbody id="tableBody">
         </tbody>
     </table>
-    <div id="noData" class="alert alert-warning text-center d-none mt-3">ไม่มีรายการลาที่กำลังจะมาถึง</div>
+    
+    <div id="noData" class="alert alert-warning text-center d-none mt-3 border-0 shadow-sm">
+      ไม่มีรายการขออนุมัติลาที่รออยู่
+    </div>
   </div>
 </div>
 
 <script>
   // ==========================================
-  // 📍 นำ URL ของ Web App อันเดียวกันกับ index.html มาวางที่นี่
+  // 📍 นำ URL ของ Web App Google Apps Script มาวางที่นี่
   const API_URL = 'https://script.google.com/macros/s/AKfycbyIfJWYnZ3FAe8gfYB3Tb3OY8moqR2lJOHUUYq6UFJrzcTve3dtlf6S7JOBkWwgsVIB/exec'; 
   // ==========================================
 
   let allData = [];
 
+  // ดึงข้อมูลเมื่อโหลดหน้าเว็บเสร็จ
   window.onload = async function() {
     try {
       const response = await fetch(API_URL, {
@@ -81,11 +89,12 @@
       allData = data;
       renderTable(allData);
     } catch (error) {
-      document.getElementById('loading').innerHTML = '<span class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</span>';
+      document.getElementById('loading').innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล กรุณาลองใหม่อีกครั้ง</div>';
       console.error(error);
     }
   };
 
+  // ฟังก์ชันวาดตาราง
   function renderTable(data) {
     document.getElementById('loading').classList.add('d-none');
     const tbody = document.getElementById('tableBody');
@@ -94,7 +103,7 @@
     
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       table.classList.add('d-none');
       noData.classList.remove('d-none');
       return;
@@ -104,7 +113,7 @@
     noData.classList.add('d-none');
 
     data.forEach(row => {
-      // กำหนดสีป้ายตามประเภทการลา
+      // ตกแต่งสีให้แยกประเภทการลาได้ชัดเจน
       let badgeClass = 'bg-secondary';
       if(row.leaveCode === 'ป่วย') badgeClass = 'bg-danger';
       else if(row.leaveCode === 'กิจ') badgeClass = 'bg-warning text-dark';
@@ -114,29 +123,36 @@
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="fw-bold text-primary">${row.leaveDate}</td>
-        <td>${row.ramaID}</td>
+        <td class="fw-bold text-success">${row.leaveDate}</td>
+        <td class="text-muted">${row.ramaID}</td>
         <td class="fw-bold">${row.name}</td>
         <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
         <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
         <td>${row.exam}</td>
-        <td class="text-success small">${row.lineDisplayName}</td>
+        <td class="small text-muted"><span class="text-success">●</span> ${row.lineDisplayName}</td>
         <td class="timestamp-text">${row.timestamp}</td>
       `;
       tbody.appendChild(tr);
     });
   }
 
+  // ฟังก์ชันค้นหาและกรองข้อมูล
   function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const groupFilter = document.getElementById('groupFilter').value;
+    const groupFilter = document.getElementById('groupFilter').value; // ดึงค่าจาก Dropdown ที่อัปเดตใหม่
 
+    // กรองข้อมูลจาก Array ต้นฉบับ
     const filteredData = allData.filter(row => {
+      // เงื่อนไขค้นหาข้อความ (ครอบคลุมทั้งชื่อและรหัส)
       const matchSearch = row.name.toLowerCase().includes(searchText) || row.ramaID.includes(searchText);
+      
+      // เงื่อนไขกรองกลุ่ม (ถ้าเลือก "แสดงทุกกลุ่ม" จะได้ค่าว่าง "" ซึ่งจะข้ามเงื่อนไขนี้ไป)
       const matchGroup = groupFilter === "" || row.group === groupFilter;
+      
       return matchSearch && matchGroup;
     });
 
+    // นำข้อมูลที่ผ่านการกรองไปวาดตารางใหม่
     renderTable(filteredData);
   }
 </script>
