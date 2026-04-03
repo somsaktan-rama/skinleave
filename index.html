@@ -414,30 +414,28 @@
     showView('view-confirm');
   }
 
-  async function submitLeave() {
-    const btn = document.getElementById('btn-submit');
-    btn.disabled = true; btn.innerText = 'กำลังส่ง...';
-    
-    let examDetails = [];
-    document.querySelectorAll('.exam-row').forEach(row => {
-      let date = row.getAttribute('data-date');
-      let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-      examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
-    });
-    
-    const res = await callAPI('submitLeave', { data: {
-      user: currentUser, leaveCode: document.getElementById('leave-type').value,
-      startDate: document.getElementById('leave-date').value, examDetails: examDetails
-    }});
-    
-    btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล';
-    if(res && res.success) { 
-      alert('ส่งข้อมูลสำเร็จ'); 
-      showView('view-main'); 
-      document.getElementById('leave-date').value = ''; 
-      setupLeaveRules(); // Reset form
-    }
-  }
+async function submitLeave() {
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.innerText = 'กำลังส่ง...';
+  
+  let examDetails = [];
+  document.querySelectorAll('.exam-row').forEach(row => {
+    let date = row.getAttribute('data-date');
+    let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
+    examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+  });
+  
+  // เตรียม Payload โดยเพิ่มค่า informer
+  const res = await callAPI('submitLeave', { data: {
+    user: currentUser,
+    leaveCode: document.getElementById('leave-type').value,
+    startDate: document.getElementById('leave-date').value,
+    examDetails: examDetails,
+    informer: lineProfile.displayName || "Web Browser" // เก็บชื่อ LINE ที่ใช้แจ้ง
+  }});
+  
+  // ... ส่วนจัดการหลังส่งสำเร็จ ...
+}
 
   // --- ฟังก์ชันค้นหา (Search) ---
   async function executeSearch() {
