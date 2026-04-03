@@ -416,27 +416,47 @@
 
 async function submitLeave() {
   const btn = document.getElementById('btn-submit');
-  btn.disabled = true; btn.innerText = 'กำลังส่ง...';
   
-  let examDetails = [];
-  document.querySelectorAll('.exam-row').forEach(row => {
-    let date = row.getAttribute('data-date');
-    let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-    examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
-  });
-  
-  // เตรียม Payload โดยเพิ่มค่า informer
-  const res = await callAPI('submitLeave', { data: {
-    user: currentUser,
-    leaveCode: document.getElementById('leave-type').value,
-    startDate: document.getElementById('leave-date').value,
-    examDetails: examDetails,
-    informer: lineProfile.displayName || "Web Browser" // เก็บชื่อ LINE ที่ใช้แจ้ง
-  }});
-  
-  // ... ส่วนจัดการหลังส่งสำเร็จ ...
-}
+  // 1. เริ่มสถานะการส่ง
+  btn.disabled = true; 
+  btn.innerText = 'กำลังส่ง...';
 
+  try {
+    let examDetails = [];
+    document.querySelectorAll('.exam-row').forEach(row => {
+      let date = row.getAttribute('data-date');
+      let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
+      examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+    });
+    
+    // 2. เรียก API
+    const res = await callAPI('submitLeave', { data: {
+      user: currentUser,
+      leaveCode: document.getElementById('leave-type').value,
+      startDate: document.getElementById('leave-date').value,
+      examDetails: examDetails,
+      informer: lineProfile.displayName || "Web Browser"
+    }});
+    
+    // 3. จัดการผลลัพธ์
+    if (res && res.success) {
+      alert('ส่งข้อมูลสำเร็จ');
+      showView('view-main');
+      document.getElementById('leave-date').value = ''; 
+      setupLeaveRules(); 
+    } else {
+      alert('เกิดข้อผิดพลาด: ' + (res ? res.message : 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในระบบหน้าเว็บ: ' + err.message);
+  } finally {
+    // 4. คืนค่าปุ่มให้กลับมาใช้งานได้เสมอ (ไม่ว่าจะสำเร็จหรือ Error)
+    btn.disabled = false; 
+    btn.innerText = 'ยืนยันและส่งข้อมูล';
+  }
+}
+	
   // --- ฟังก์ชันค้นหา (Search) ---
   async function executeSearch() {
     const date = document.getElementById('search-date').value;
