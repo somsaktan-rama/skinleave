@@ -183,6 +183,20 @@
     return `${browser} (${os})`;
   }	
 	
+// --- ฟังก์ชันดึงหมายเลข IP Address ---
+  async function getClientIP() {
+    try {
+      // เรียกใช้บริการฟรีจาก api.ipify.org เพื่อขอเลข IP ของตัวเอง
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.warn("ไม่สามารถดึง IP ได้:", error);
+      return "Unknown IP";
+    }
+  }
+	
+	
   // --- ฟังก์ชันช่วยเหลือ (Helpers) ---
   function formatDateStr(date) {
     const y = date.getFullYear();
@@ -452,48 +466,55 @@ function prepareExamSelection() {
   }
 
 async function submitLeave() {
-  const btn = document.getElementById('btn-submit');
-  
-  // 1. เริ่มสถานะการส่ง
-  btn.disabled = true; 
-  btn.innerText = 'กำลังส่ง...';
+    const btn = document.getElementById('btn-submit');
+    
+    // 1. เริ่มสถานะการส่ง
+    btn.disabled = true; 
+    btn.innerText = 'กำลังส่ง...';
 
-  try {
-    let examDetails = [];
-    document.querySelectorAll('.exam-row').forEach(row => {
-      let date = row.getAttribute('data-date');
-      let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-      examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
-    });
-    
-    // 2. เรียก API
-const res = await callAPI('submitLeave', { data: {
-      user: currentUser,
-      leaveCode: document.getElementById('leave-type').value,
-      startDate: document.getElementById('leave-date').value,
-      examDetails: examDetails,
-      informer: lineProfile.displayName || getDeviceDetails() // <--- เปลี่ยนมาใช้ฟังก์ชัน
-    }});
-    
-    // 3. จัดการผลลัพธ์
-    if (res && res.success) {
-      alert('ส่งข้อมูลสำเร็จ');
-      showView('view-main');
-      document.getElementById('leave-date').value = ''; 
-      setupLeaveRules(); 
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + (res ? res.message : 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'));
+    try {
+      let examDetails = [];
+      document.querySelectorAll('.exam-row').forEach(row => {
+        let date = row.getAttribute('data-date');
+        let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
+        examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+      });
+      
+      // 2. ดึง IP Address (รอจนกว่าจะได้เลข IP มา)
+      let ipAddress = await getClientIP();
+      
+      // 3. ประกอบชื่อผู้แจ้ง (Informer) ให้สมบูรณ์
+      // ถ้าเข้าผ่าน LINE ใช้ชื่อไลน์, ถ้าผ่านเบราว์เซอร์ใช้ข้อมูลอุปกรณ์ แล้วเอา IP มาต่อท้าย
+      let baseName = lineProfile.displayName ? lineProfile.displayName : getDeviceDetails();
+      let finalInformer = `${baseName} (IP: ${ipAddress})`;
+      
+      // 4. เรียก API เพื่อส่งข้อมูล
+      const res = await callAPI('submitLeave', { data: {
+        user: currentUser,
+        leaveCode: document.getElementById('leave-type').value,
+        startDate: document.getElementById('leave-date').value,
+        examDetails: examDetails,
+        informer: finalInformer // <--- ส่งข้อมูลที่มี IP ไปเก็บบันทึก
+      }});
+      
+      // 5. จัดการผลลัพธ์
+      if (res && res.success) {
+        alert('ส่งข้อมูลสำเร็จ');
+        showView('view-main');
+        document.getElementById('leave-date').value = ''; 
+        setupLeaveRules(); 
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + (res ? res.message : 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในระบบหน้าเว็บ: ' + err.message);
+    } finally {
+      // 6. คืนค่าปุ่มให้กลับมาใช้งานได้เสมอ
+      btn.disabled = false; 
+      btn.innerText = 'ยืนยันและส่งข้อมูล';
     }
-  } catch (err) {
-    console.error(err);
-    alert('เกิดข้อผิดพลาดในระบบหน้าเว็บ: ' + err.message);
-  } finally {
-    // 4. คืนค่าปุ่มให้กลับมาใช้งานได้เสมอ (ไม่ว่าจะสำเร็จหรือ Error)
-    btn.disabled = false; 
-    btn.innerText = 'ยืนยันและส่งข้อมูล';
-  }
-}
-	
+  }	
   // --- ฟังก์ชันค้นหา (Search) ---
   async function executeSearch() {
     const date = document.getElementById('search-date').value;
