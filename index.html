@@ -183,17 +183,37 @@
     return `${browser} (${os})`;
   }	
 	
-// --- ฟังก์ชันดึงหมายเลข IP Address ---
+// --- ฟังก์ชันดึงหมายเลข IP Address (อัปเดตแก้ปัญหา Firefox บล็อก) ---
   async function getClientIP() {
-    try {
-      // เรียกใช้บริการฟรีจาก api.ipify.org เพื่อขอเลข IP ของตัวเอง
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;
-    } catch (error) {
-      console.warn("ไม่สามารถดึง IP ได้:", error);
-      return "Unknown IP";
+    // เตรียมรายชื่อผู้ให้บริการเช็ก IP ฟรี (เผื่อโดนบล็อกไปบางตัว)
+    const apiSources = [
+      'https://api.ipify.org?format=json',
+      'https://ipinfo.io/json',
+      'https://api.db-ip.com/v2/free/self'
+    ];
+
+    for (let url of apiSources) {
+      try {
+        // ตั้งเวลา Timeout 3 วินาที (ถ้าเบราว์เซอร์บล็อกหรือโหลดนานเกินไป ให้ข้ามทันที)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          // แต่ละเว็บจะส่งชื่อตัวแปรมาต่างกัน (ip, ipAddress) จึงต้องดักจับให้ครอบคลุม
+          return data.ip || data.ipAddress || data.clientIp || "Unknown IP";
+        }
+      } catch (error) {
+        // ถ้าเข้าเงื่อนไขนี้แปลว่า Firefox หรือ Adblocker บล็อก URL นี้ ให้ลูปไปลอง URL ถัดไป
+        console.warn(`ถูกบล็อกหรือดึงไม่ได้จาก: ${url}`);
+      }
     }
+    
+    // ถ้าโดนบล็อกครบทุกตัวจริงๆ (ตั้งค่า Privacy ไว้ขั้นสุด) จะส่งค่านี้กลับไปแทนการ Error
+    return "Unknown IP (Blocked)";
   }
 	
 	
