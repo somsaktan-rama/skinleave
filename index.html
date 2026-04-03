@@ -374,34 +374,46 @@
     }
   }
 
-  function getWorkingDays(startDateStr, duration) {
-    let days = [];
-    let currentDate = new Date(startDateStr);
-    let daysNeeded = Math.ceil(duration);
-    let safetyNet = 0; 
-    const safeHolidays = systemData.holidays || [];
+function getWorkingDays(startDateStr, duration, leaveType) {
+  let days = [];
+  let currentDate = new Date(startDateStr);
+  let daysNeeded = Math.ceil(duration);
+  let safetyNet = 0; 
+  const safeHolidays = systemData.holidays || [];
 
-    while (days.length < daysNeeded && safetyNet < 100) {
-      safetyNet++;
-      let dStr = formatDateStr(currentDate);
-      let dayOfWeek = currentDate.getDay(); 
-      let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-      let isHoliday = safeHolidays.includes(dStr);
-      
-      if (!isWeekend && !isHoliday) { days.push(dStr); }
-      currentDate.setDate(currentDate.getDate() + 1);
+  while (days.length < daysNeeded && safetyNet < 100) {
+    safetyNet++;
+    let dStr = formatDateStr(currentDate);
+    let dayOfWeek = currentDate.getDay(); // 0 = อาทิตย์, 6 = เสาร์
+    let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+    let isHoliday = safeHolidays.includes(dStr);
+    
+    if (leaveType === 'ตรวจ') {
+      // ✅ กรณีลาตรวจ: เอาวันเสาร์-อาทิตย์ด้วย แต่ "ไม่เอา" วันหยุดนักขัตฤกษ์
+      if (!isHoliday) { 
+        days.push(dStr); 
+      }
+    } else {
+      // ❌ กรณีลาอื่นๆ: ไม่เอาเสาร์-อาทิตย์ และ ไม่เอาวันหยุดนักขัตฤกษ์
+      if (!isWeekend && !isHoliday) { 
+        days.push(dStr); 
+      }
     }
-    return days;
+    currentDate.setDate(currentDate.getDate() + 1);
   }
+  return days;
+}
 
   // --- ฟังก์ชันบันทึกข้อมูล (Submit Flow) ---
-  function prepareExamSelection() {
-    const startDate = document.getElementById('leave-date').value;
-    const duration = parseFloat(document.getElementById('leave-duration').value);
-    const type = document.getElementById('leave-type').value;
-    if (!startDate) return alert('กรุณาเลือกวันที่');
-    
-    calculatedLeaveDays = getWorkingDays(startDate, duration);
+function prepareExamSelection() {
+  const startDate = document.getElementById('leave-date').value;
+  const duration = parseFloat(document.getElementById('leave-duration').value);
+  const type = document.getElementById('leave-type').value; // ดึงประเภทการลามาใช้
+  if (!startDate) return alert('กรุณาเลือกวันที่');
+  
+  // ส่ง type เข้าไปคำนวณด้วย
+  calculatedLeaveDays = getWorkingDays(startDate, duration, type);
+	
     if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้');
 
     const container = document.getElementById('exam-list-container');
