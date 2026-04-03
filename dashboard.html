@@ -122,16 +122,17 @@
       else if(row.leaveCode === 'ต่างประเทศ') badgeClass = 'bg-primary';
 
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="fw-bold text-success">${row.leaveDate}</td>
-        <td class="text-muted">${row.ramaID}</td>
-        <td class="fw-bold">${row.name}</td>
-        <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
-        <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
-        <td>${row.exam}</td>
-        <td class="small text-muted"><span class="text-success">●</span> ${row.lineDisplayName}</td>
-        <td class="timestamp-text">${row.timestamp}</td>
-      `;
+// เปลี่ยนหัวตารางใน HTML เป็น "ผู้แจ้ง (Informer)"
+// และใน Loop การวาดตาราง ให้ใช้ row.informer
+tr.innerHTML = `
+  <td class="fw-bold text-success">${row.leaveDate}</td>
+  <td class="text-muted">${row.ramaID}</td>
+  <td class="fw-bold">${row.name}</td>
+  <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
+  <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
+  <td>${row.exam}</td>
+  <td class="small text-info">👤 ${row.informer}</td> <td class="timestamp-text">${row.timestamp}</td>
+`;
       tbody.appendChild(tr);
     });
   }
