@@ -159,29 +159,43 @@
   let lineProfile = { uid: '', displayName: '' }; 
 
 // --- ฟังก์ชันดึงข้อมูลอุปกรณ์และเบราว์เซอร์ (กรณีไม่ผ่าน LINE) ---
+// --- ฟังก์ชันดึงข้อมูลอุปกรณ์ OS และเบราว์เซอร์ ---
   function getDeviceDetails() {
     const ua = navigator.userAgent;
-    let browser = "Web Browser";
-    let os = "Unknown OS";
+    let browser = "UnknownBrowser";
+    let os = "UnknownOS";
+    let device = "Desktop"; // ตั้งค่าเริ่มต้นเป็น Desktop
 
-    // เช็กชื่อเบราว์เซอร์
+    // 1. เช็กเบราว์เซอร์
     if (ua.includes("Edg")) browser = "Edge";
     else if (ua.includes("Chrome")) browser = "Chrome";
     else if (ua.includes("Firefox")) browser = "Firefox";
     else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
     else if (ua.includes("Opera") || ua.includes("OPR")) browser = "Opera";
+    else if (ua.includes("Line")) browser = "LINE_InApp"; // เผื่อเปิดผ่านแอป LINE โดยตรง
 
-    // เช็กระบบปฏิบัติการ
+    // 2. เช็ก OS และประเภท Device
     if (ua.includes("Win")) os = "Windows";
-    else if (ua.includes("Mac")) os = "Mac";
+    else if (ua.includes("Mac")) os = "MacOS";
     else if (ua.includes("Linux")) os = "Linux";
     
-    // เผื่อเปิดในมือถือแต่ไม่ผ่าน LINE
-    if (ua.includes("Android")) os = "Android";
-    else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+    // ถ้าเจอ Android/iOS ให้เปลี่ยนประเภท Device เป็น Mobile หรือ Tablet
+    if (ua.includes("Android")) { 
+      os = "Android"; 
+      device = "Mobile"; 
+    }
+    else if (ua.includes("iPhone")) { 
+      os = "iOS"; 
+      device = "Mobile"; 
+    }
+    else if (ua.includes("iPad")) { 
+      os = "iOS"; 
+      device = "Tablet"; 
+    }
 
-    return `${browser} (${os})`;
-  }	
+    // ส่งคืนรูปแบบ: device,OS,browser (เช่น Desktop,Windows,Chrome)
+    return `${device},${os},${browser}`;
+  }
 	
 // --- ฟังก์ชันดึงหมายเลข IP Address (อัปเดตแก้ปัญหา Firefox บล็อก) ---
   async function getClientIP() {
@@ -500,13 +514,20 @@ async function submitLeave() {
         examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
       });
       
-      // 2. ดึง IP Address (รอจนกว่าจะได้เลข IP มา)
+	  // 2. ดึง IP Address (รอจนกว่าจะได้เลข IP มา)
       let ipAddress = await getClientIP();
       
-      // 3. ประกอบชื่อผู้แจ้ง (Informer) ให้สมบูรณ์
-      // ถ้าเข้าผ่าน LINE ใช้ชื่อไลน์, ถ้าผ่านเบราว์เซอร์ใช้ข้อมูลอุปกรณ์ แล้วเอา IP มาต่อท้าย
-      let baseName = lineProfile.displayName ? lineProfile.displayName : getDeviceDetails();
-      let finalInformer = `${baseName} (IP: ${ipAddress})`;
+      // 3. ประกอบข้อมูล Informer
+      let deviceStr = getDeviceDetails(); // จะได้เป็น "device,OS,browser"
+      let finalInformer = "";
+      
+      // ถ้าระบบมีชื่อ LINE ให้เอาชื่อ LINE ขึ้นก่อน แล้วตามด้วยข้อมูลเครื่องและ IP
+      if (lineProfile && lineProfile.displayName) {
+        finalInformer = `${lineProfile.displayName},${deviceStr},${ipAddress}`;
+      } else {
+        // ถ้าไม่มีชื่อ LINE (เข้าผ่านคอมพิวเตอร์ปกติ) ให้เริ่มที่ข้อมูลเครื่องเลย
+        finalInformer = `${deviceStr},${ipAddress}`;
+      }
       
       // 4. เรียก API เพื่อส่งข้อมูล
       const res = await callAPI('submitLeave', { data: {
@@ -514,7 +535,7 @@ async function submitLeave() {
         leaveCode: document.getElementById('leave-type').value,
         startDate: document.getElementById('leave-date').value,
         examDetails: examDetails,
-        informer: finalInformer // <--- ส่งข้อมูลที่มี IP ไปเก็บบันทึก
+        informer: finalInformer // <--- ส่งสตริงใหม่ไปบันทึก
       }});
       
       // 5. จัดการผลลัพธ์
