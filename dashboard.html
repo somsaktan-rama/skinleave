@@ -1,39 +1,51 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>สรุปการลา หน่วยโรคผิวหนัง</title>
+  <title>สรุปการลาของหน่วยโรคผิวหนัง</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; }
-    .header-panel { background: linear-gradient(135deg, #20c997 0%, #12a378 100%); color: white; padding: 20px; border-radius: 0 0 15px 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow-x: auto; }
+    /* CSS พื้นฐาน (Light Mode) */
+    body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; transition: background-color 0.3s; }
+    .header-panel { background: linear-gradient(135deg, #20c997 0%, #12a378 100%); color: white; padding: 20px; border-radius: 0 0 15px 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+    .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow-x: auto; transition: background-color 0.3s; }
     .badge-leave { font-size: 0.85em; padding: 5px 10px; }
-    th { white-space: nowrap; background-color: #f1f4f9 !important; }
+    th { white-space: nowrap; background-color: #f1f4f9 !important; transition: background-color 0.3s; }
     td { vertical-align: middle; white-space: nowrap; }
     .timestamp-text { font-size: 0.8em; color: #888; }
+    .btn-theme-toggle { position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.9em; backdrop-filter: blur(5px); }
+    .btn-theme-toggle:hover { background: rgba(255,255,255,0.4); }
+
+    /* CSS สำหรับ Dark Mode อัตโนมัติ */
+    [data-bs-theme="dark"] body { background-color: #121212; }
+    [data-bs-theme="dark"] .header-panel { background: linear-gradient(135deg, #198754 0%, #0f5132 100%); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    [data-bs-theme="dark"] .table-container { background-color: #1e1e1e; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    [data-bs-theme="dark"] th { background-color: #2c2c2c !important; color: #e0e0e0; }
+    [data-bs-theme="dark"] .text-success { color: #28a745 !important; }
+    [data-bs-theme="dark"] .text-muted { color: #adb5bd !important; }
   </style>
 </head>
 <body>
 
 <div class="container-fluid mt-2 mb-5">
   <div class="header-panel text-center">
-    <h3 class="fw-bold mb-0">📊 สรุปการลา สาขาวิชาโรคผิวหนัง</h3>
-    <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลาที่กำลังจะมาถึง</p>
+    <button class="btn-theme-toggle" onclick="toggleThemeManual()" id="themeBtn">☀️ โหมดสว่าง</button>
+    
+    <h3 class="fw-bold mb-0">📊 ภาพรวมการลา สาขาวิชาโรคผิวหนัง</h3>
+    <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลาที่กำลังจะมาถึง (นับตั้งแต่วันนี้ไป)</p>
   </div>
 
   <div class="row mb-3">
     <div class="col-md-6 mb-2">
-      <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="🔍 ค้นหา ชื่อ หรือ รหัส RamaID..." onkeyup="filterTable()">
+      <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="🔍 ค้นหา ชื่อ หรือ รหัสบุคล..." onkeyup="filterTable()">
     </div>
-    
     <div class="col-md-6 mb-2">
       <select id="groupFilter" class="form-select form-select-lg" onchange="filterTable()">
         <option value="">-- แสดงทุกกลุ่ม --</option>
-        <option value="อาจารย์">อาจารย์</option>
+        <option value="อาจารย์">อาจารย์ ประจำ/บริการ/พิเศษ</option>
         <option value="แพทย์ประจำบ้าน">แพทย์ประจำบ้าน</option>
-        <option value="แพทย์ผู้ช่วย">แพทย์ผู้ช่วย</option>
+        <option value="แพทย์ผู้ช่วย">แพทย์ผู้ช่วย Research/Dermsurg</option>
         <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
       </select>
     </div>
@@ -46,16 +58,16 @@
     </div>
     
     <table class="table table-hover d-none align-middle" id="dashboardTable">
-      <thead class="table-light">
+      <thead class="table-light" id="tableHead">
         <tr>
           <th>วันที่ลา</th>
-          <th>รหัสบุคคล</th>
+          <th>รหัส (Rama ID)</th>
           <th>ชื่อ-สกุล</th>
           <th>กลุ่ม (Group)</th>
           <th>ประเภท</th>
-          <th>ลาคลินิกตรวจ</th>
-          <th>LINE ผู้แจ้ง</th>
-          <th>เวลาทำรายการ</th>
+          <th>ช่วงเวลาตรวจ</th>
+          <th>ข้อมูลผู้ทำรายการ (Informer)</th>
+          <th>เวลาบันทึก</th>
         </tr>
       </thead>
       <tbody id="tableBody">
@@ -75,9 +87,44 @@
   // ==========================================
 
   let allData = [];
+  let isDarkMode = false;
 
-  // ดึงข้อมูลเมื่อโหลดหน้าเว็บเสร็จ
+  // --- ฟังก์ชันจัดการ Dark Mode อัตโนมัติตามเวลา ---
+  function applyThemeByTime() {
+    const currentHour = new Date().getHours();
+    // ถ้าเวลาตั้งแต่ 18:00 น. ถึง 05:59 น. ให้เป็นโหมดมืด
+    if (currentHour >= 18 || currentHour < 6) {
+      setTheme('dark');
+    } else {
+      setTheme('light');
+    }
+  }
+
+  // ฟังก์ชันปรับสีหน้าจอ
+  function setTheme(theme) {
+    const htmlTag = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    
+    if (theme === 'dark') {
+      htmlTag.setAttribute('data-bs-theme', 'dark');
+      themeBtn.innerText = '🌙 โหมดมืด';
+      isDarkMode = true;
+    } else {
+      htmlTag.setAttribute('data-bs-theme', 'light');
+      themeBtn.innerText = '☀️ โหมดสว่าง';
+      isDarkMode = false;
+    }
+  }
+
+  // ฟังก์ชันให้ผู้ใช้กดสลับเองได้
+  function toggleThemeManual() {
+    setTheme(isDarkMode ? 'light' : 'dark');
+  }
+
+  // --- ดึงข้อมูลเมื่อโหลดหน้าเว็บ ---
   window.onload = async function() {
+    applyThemeByTime(); // เช็กเวลาและเปลี่ยนสีทันทีที่เปิดหน้าเว็บ
+
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -94,7 +141,6 @@
     }
   };
 
-  // ฟังก์ชันวาดตาราง
   function renderTable(data) {
     document.getElementById('loading').classList.add('d-none');
     const tbody = document.getElementById('tableBody');
@@ -113,7 +159,6 @@
     noData.classList.add('d-none');
 
     data.forEach(row => {
-      // ตกแต่งสีให้แยกประเภทการลาได้ชัดเจน
       let badgeClass = 'bg-secondary';
       if(row.leaveCode === 'ป่วย') badgeClass = 'bg-danger';
       else if(row.leaveCode === 'กิจ') badgeClass = 'bg-warning text-dark';
@@ -122,61 +167,41 @@
       else if(row.leaveCode === 'ต่างประเทศ') badgeClass = 'bg-primary';
 
       const tr = document.createElement('tr');
-// เปลี่ยนหัวตารางใน HTML เป็น "ผู้แจ้ง (Informer)"
-// และใน Loop การวาดตาราง ให้ใช้ row.informer
-tr.innerHTML = `
-  <td class="fw-bold text-success">${row.leaveDate}</td>
-  <td class="text-muted">${row.ramaID}</td>
-  <td class="fw-bold">${row.name}</td>
-  <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
-  <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
-  <td>${row.exam}</td>
-  <td class="small text-info">👤 ${row.informer}</td> <td class="timestamp-text">${row.timestamp}</td>
-`;
+      tr.innerHTML = `
+        <td class="fw-bold text-success">${row.leaveDate}</td>
+        <td class="text-muted">${row.ramaID}</td>
+        <td class="fw-bold">${row.name}</td>
+        <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
+        <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
+        <td>${row.exam}</td>
+        <td class="small text-info opacity-75">${row.informer}</td>
+        <td class="timestamp-text">${row.timestamp}</td>
+      `;
       tbody.appendChild(tr);
     });
   }
 
-// ฟังก์ชันค้นหาและกรองข้อมูล (อัปเดตแยกกลุ่มย่อยชัดเจน)
   function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const groupFilter = document.getElementById('groupFilter').value; 
 
     const filteredData = allData.filter(row => {
-      // 1. เงื่อนไขค้นหาข้อความ (คลุมชื่อและรหัส)
       const matchSearch = row.name.toLowerCase().includes(searchText) || row.ramaID.includes(searchText);
       
-      // 2. เงื่อนไขกรองกลุ่มแบบระบุ Sub-group
       let matchGroup = false;
-      let userGroup = row.group.trim(); // ตัดช่องว่างกันพลาด
+      let userGroup = row.group.trim(); 
 
-      if (groupFilter === "") {
-        // แสดงทุกกลุ่ม
-        matchGroup = true;
-      } 
-      else if (groupFilter === "อาจารย์") {
-        // ป้องกันดึง 'แพทย์ผู้ช่วยอาจารย์' ติดมาด้วย โดยระบุชื่อตรงๆ
-        matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ", "อาจารย์พิเศษ"].includes(userGroup);
-      } 
-      else if (groupFilter === "แพทย์ประจำบ้าน") {
-        // ดึงเฉพาะแพทย์ประจำบ้านปี 2, 3, 4
-        matchGroup = ["แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4"].includes(userGroup);
-      } 
-      else if (groupFilter === "แพทย์ผู้ช่วย") {
-        // ดึงเฉพาะแพทย์ผู้ช่วยวิจัย และ แพทย์ผู้ช่วยอาจารย์
-        matchGroup = ["แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup);
-      }
-      else {
-        // สำหรับกลุ่มอื่นๆ (เช่น เจ้าหน้าที่) ให้เทียบชื่อให้ตรงกันพอดี
-        matchGroup = userGroup === groupFilter;
-      }
+      if (groupFilter === "") matchGroup = true;
+      else if (groupFilter === "อาจารย์") matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ"].includes(userGroup);
+      else if (groupFilter === "แพทย์ประจำบ้าน") matchGroup = ["แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4"].includes(userGroup);
+      else if (groupFilter === "แพทย์ผู้ช่วย") matchGroup = ["แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup);
+      else matchGroup = userGroup === groupFilter;
       
       return matchSearch && matchGroup;
     });
 
     renderTable(filteredData);
-  }  
-  
+  }
 </script>
 </body>
 </html>
