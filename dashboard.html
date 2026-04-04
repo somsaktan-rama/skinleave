@@ -192,7 +192,7 @@
       let userGroup = row.group.trim(); 
 
       if (groupFilter === "") matchGroup = true;
-      else if (groupFilter === "อาจารย์") matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ"].includes(userGroup);
+      else if (groupFilter === "อาจารย์") matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ", "อาจารย์พิเศษ"].includes(userGroup);
       else if (groupFilter === "แพทย์ประจำบ้าน") matchGroup = ["แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4"].includes(userGroup);
       else if (groupFilter === "แพทย์ผู้ช่วย") matchGroup = ["แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup);
       else matchGroup = userGroup === groupFilter;
