@@ -264,7 +264,11 @@
 
   // --- เริ่มต้นระบบ (Initialize) ---
   window.onload = async function() {
-    try {
+// 📍 1. เพิ่มโค้ด 2 บรรทัดนี้ เพื่อตั้งค่าวันที่ค้นหาให้เป็นวันนี้
+    const today = new Date();
+    document.getElementById('search-date').value = formatDateStr(today);
+	  
+	  try {
       if(MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
         await liff.init({ liffId: MY_LIFF_ID });
         if (liff.isLoggedIn()) {
