@@ -1,21 +1,20 @@
+/* update 6/4/2026 line biding */
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบลางาน สาขาวิชาโรคผิวหนัง</title>
+  <title>ระบบลางาน สาขาโรควิชาผิวหนัง</title>
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   
   <style>
-    body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; }
+    body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; transition: background-color 0.3s; }
     .card { border-radius: 12px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
     .hidden { display: none !important; }
     .app-header { background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); color: white; padding: 20px; border-radius: 0 0 20px 20px; }
     .exam-row { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #0d6efd; }
-    
-    /* Flex Message Style */
     .flex-card { background: white; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; max-width: 350px; margin: 0 auto; }
     .flex-header { background-color: #00b900; color: white; padding: 15px; text-align: center; font-weight: bold; }
     .flex-body { padding: 20px; }
@@ -31,15 +30,15 @@
   
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
-        <h4 class="fw-bold">ระบบลางานออนไลน์</h4>
+        <h4 class="fw-bold">ลางานออนไลน์</h4>
         <span class="text-muted">สาขาวิชาโรคผิวหนัง</span>
     </div>
     
-    <div id="line-status" class="text-center small text-success mb-3">ตรวจสอบสถานะ LINE...</div>
+    <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
 
     <div class="mb-3">
-      <label class="form-label small">รหัสบุคคล RamaID</label>
-      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="รหัสบุคคล" maxlength="6">
+      <label class="form-label small">รหัสบุคคล</label>
+      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="เช่น 012345" maxlength="6">
     </div>
     
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
@@ -80,11 +79,14 @@
         <select id="leave-duration" class="form-select" disabled></select>
       </div>
 
+      <div id="line-warning" class="alert alert-warning small hidden">
+        ⚠️ คุณเข้าใช้งานผ่านเบราว์เซอร์ปกติ ระบบอนุญาตให้ดูข้อมูลได้เท่านั้น หากต้องการลางาน กรุณาเปิดลิงก์นี้ผ่านแอปพลิเคชัน LINE
+      </div>
+
       <button class="btn btn-primary btn-lg w-100 mb-2" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป (ระบุช่วงเวลาลาตรวจคลินิก)</button>
     </div>
     
     <button class="btn btn-info w-100 mb-3 text-white" style="background-color: #0dcaf0; border: none;" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
-
     <button class="btn btn-light text-danger w-100 shadow-sm" onclick="logout()">ออกจากระบบ</button>
   </div>
 
@@ -107,27 +109,22 @@
 
   <div id="view-confirm" class="hidden">
     <div class="alert alert-info small text-center mb-3">ตรวจสอบความถูกต้องและบันทึกหน้าจอไว้ก่อนยืนยัน</div>
-    
     <div class="flex-card mb-4" id="flex-capture">
-        <div class="flex-header">ใบขออนุมัติลางาน</div>
+        <div class="flex-header">ใบยืนยันขอลางาน</div>
         <div class="flex-body">
             <div class="flex-item"><span class="flex-label">ผู้ขอลา</span><span class="flex-value" id="f-name">-</span></div>
-            <div class="flex-item"><span class="flex-label">สายงาน/กลุ่ม</span><span class="flex-value" id="f-group">-</span></div>
+            <div class="flex-item"><span class="flex-label">สายงาน</span><span class="flex-value" id="f-group">-</span></div>
             <hr>
             <div class="flex-item"><span class="flex-label">ประเภท</span><span class="flex-value text-primary" id="f-type">-</span></div>
             <div class="flex-item"><span class="flex-label">เริ่มวันที่</span><span class="flex-value" id="f-start">-</span></div>
             <div class="flex-item"><span class="flex-label">รวม</span><span class="flex-value" id="f-dur">-</span></div>
             <div class="mt-3 p-2 bg-light rounded" style="font-size:12px;">
-                <strong>รายละเอียด ลาตรวจคลินิก:</strong>
+                <strong>รายละเอียดลาตรวจ:</strong>
                 <div id="f-exams" class="mt-1"></div>
             </div>
         </div>
-        <div class="flex-footer">
-            สร้างโดยระบบลางานอัตโนมัติ<br>
-            <span id="f-time"></span>
-        </div>
+        <div class="flex-footer">สร้างโดยระบบลางานอัตโนมัติ<br><span id="f-time"></span></div>
     </div>
-
     <div class="d-flex flex-column gap-2">
         <button class="btn btn-success btn-lg shadow-sm" id="btn-submit" onclick="submitLeave()">ยืนยันและส่งข้อมูล</button>
         <button class="btn btn-link text-secondary" onclick="showView('view-exam')">แก้ไขข้อมูล</button>
@@ -141,97 +138,20 @@
     <div id="search-results"></div>
     <hr><button class="btn btn-secondary w-100" onclick="showView('view-login')">กลับหน้าแรก</button>
   </div>
-
 </div>
 
 <script>
-  // 📍 1. แก้ไข 2 บรรทัดนี้ให้เป็นข้อมูลของคุณ 📍
- // 1. นำ URL ของ Web App Google Apps Script มาวาง
+  // 📍================ แก้ไขแค่ 2 บรรทัดนี้ ================📍
     const API_URL = 'https://script.google.com/macros/s/AKfycbz8arUrcqJtHNmReUHe8xMJ5mqn7PNYe2sijWjHzzT2od9V_wXsYvD8_190AzoNfYbd/exec'; 
-  
-  // 2. นำ LIFF ID จาก LINE Developers มาวาง
     const MY_LIFF_ID = '2009672880-fTIAHxNE';
-   // ============================================
+  // =====================================================
 
   let currentUser = null;
   let systemData = { holidays: [], leaveTypes: [] };
   let calculatedLeaveDays = [];
   let lineProfile = { uid: '', displayName: '' }; 
 
-// --- ฟังก์ชันดึงข้อมูลอุปกรณ์และเบราว์เซอร์ (กรณีไม่ผ่าน LINE) ---
-// --- ฟังก์ชันดึงข้อมูลอุปกรณ์ OS และเบราว์เซอร์ ---
-  function getDeviceDetails() {
-    const ua = navigator.userAgent;
-    let browser = "UnknownBrowser";
-    let os = "UnknownOS";
-    let device = "Desktop"; // ตั้งค่าเริ่มต้นเป็น Desktop
-
-    // 1. เช็กเบราว์เซอร์
-    if (ua.includes("Edg")) browser = "Edge";
-    else if (ua.includes("Chrome")) browser = "Chrome";
-    else if (ua.includes("Firefox")) browser = "Firefox";
-    else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
-    else if (ua.includes("Opera") || ua.includes("OPR")) browser = "Opera";
-    else if (ua.includes("Line")) browser = "LINE_InApp"; // เผื่อเปิดผ่านแอป LINE โดยตรง
-
-    // 2. เช็ก OS และประเภท Device
-    if (ua.includes("Win")) os = "Windows";
-    else if (ua.includes("Mac")) os = "MacOS";
-    else if (ua.includes("Linux")) os = "Linux";
-    
-    // ถ้าเจอ Android/iOS ให้เปลี่ยนประเภท Device เป็น Mobile หรือ Tablet
-    if (ua.includes("Android")) { 
-      os = "Android"; 
-      device = "Mobile"; 
-    }
-    else if (ua.includes("iPhone")) { 
-      os = "iOS"; 
-      device = "Mobile"; 
-    }
-    else if (ua.includes("iPad")) { 
-      os = "iOS"; 
-      device = "Tablet"; 
-    }
-
-    // ส่งคืนรูปแบบ: device,OS,browser (เช่น Desktop,Windows,Chrome)
-    return `${device},${os},${browser}`;
-  }
-	
-// --- ฟังก์ชันดึงหมายเลข IP Address (อัปเดตแก้ปัญหา Firefox บล็อก) ---
-  async function getClientIP() {
-    // เตรียมรายชื่อผู้ให้บริการเช็ก IP ฟรี (เผื่อโดนบล็อกไปบางตัว)
-    const apiSources = [
-      'https://api.ipify.org?format=json',
-      'https://ipinfo.io/json',
-      'https://api.db-ip.com/v2/free/self'
-    ];
-
-    for (let url of apiSources) {
-      try {
-        // ตั้งเวลา Timeout 3 วินาที (ถ้าเบราว์เซอร์บล็อกหรือโหลดนานเกินไป ให้ข้ามทันที)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          // แต่ละเว็บจะส่งชื่อตัวแปรมาต่างกัน (ip, ipAddress) จึงต้องดักจับให้ครอบคลุม
-          return data.ip || data.ipAddress || data.clientIp || "Unknown IP";
-        }
-      } catch (error) {
-        // ถ้าเข้าเงื่อนไขนี้แปลว่า Firefox หรือ Adblocker บล็อก URL นี้ ให้ลูปไปลอง URL ถัดไป
-        console.warn(`ถูกบล็อกหรือดึงไม่ได้จาก: ${url}`);
-      }
-    }
-    
-    // ถ้าโดนบล็อกครบทุกตัวจริงๆ (ตั้งค่า Privacy ไว้ขั้นสุด) จะส่งค่านี้กลับไปแทนการ Error
-    return "Unknown IP (Blocked)";
-  }
-	
-	
-  // --- ฟังก์ชันช่วยเหลือ (Helpers) ---
+  // --- Helpers ---
   function formatDateStr(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -246,265 +166,182 @@
   }
 
   async function callAPI(action, data = {}) {
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow',
-        body: JSON.stringify({ action: action, ...data })
-      });
-      const responseText = await response.text();
-      return JSON.parse(responseText);
-    } catch (error) {
-      console.error('API Error:', error);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
-      return null;
-    }
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, ...data })
+    });
+    return response.json();
   }
 
-// --- ระบบแกะรอย (Tracker) เพื่อหาจุดค้าง ---
+  // --- Device & IP Info ---
+  function getDeviceDetails() {
+    const ua = navigator.userAgent;
+    let browser = "UnknownBrowser"; let os = "UnknownOS"; let device = "Desktop";
+    if (ua.includes("Edg")) browser = "Edge";
+    else if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+    else if (ua.includes("Line")) browser = "LINE_InApp";
+    
+    if (ua.includes("Win")) os = "Windows";
+    else if (ua.includes("Mac")) os = "MacOS";
+    if (ua.includes("Android")) { os = "Android"; device = "Mobile"; }
+    else if (ua.includes("iPhone")) { os = "iOS"; device = "Mobile"; }
+    else if (ua.includes("iPad")) { os = "iOS"; device = "Tablet"; }
+    return `${device},${os},${browser}`;
+  }
+
+  async function getClientIP() {
+    const apiSources = ['https://api.ipify.org?format=json', 'https://ipinfo.io/json'];
+    for (let url of apiSources) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (response.ok) { const data = await response.json(); return data.ip || "Unknown IP"; }
+      } catch (e) {}
+    }
+    return "Unknown IP (Blocked)";
+  }
+
+  // --- Init & Tracker ---
   window.onload = function() {
     const statusText = document.getElementById('line-status');
     statusText.innerText = "1/3 กำลังเตรียมระบบ...";
 
-    // 1. ตั้งวันที่
-    try {
-      const today = new Date();
-      document.getElementById('search-date').value = formatDateStr(today);
-    } catch(e) {}
+    try { document.getElementById('search-date').value = formatDateStr(new Date()); } catch(e) {}
 
-    statusText.innerText = "2/3 กำลังเชื่อมต่อ Google Sheet...";
-    
-    // 2. โหลดฐานข้อมูล
+    statusText.innerText = "2/3 กำลังดึงข้อมูลจากฐานข้อมูล...";
     callAPI('getSystemData').then(data => {
       if (data) systemData = data;
       setupLeaveRules();
       
-      statusText.innerText = "3/3 กำลังตรวจสอบ LINE...";
-      
-      // 3. โหลด LINE LIFF
+      statusText.innerText = "3/3 กำลังตรวจสอบการเชื่อมต่อ LINE...";
       if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
         liff.init({ liffId: MY_LIFF_ID }).then(() => {
           if (liff.isLoggedIn()) {
             liff.getProfile().then(profile => {
-              lineProfile.uid = profile.userId;
-              lineProfile.displayName = profile.displayName;
+              lineProfile.uid = profile.userId; lineProfile.displayName = profile.displayName;
               statusText.innerText = '✅ พร้อมใช้งาน: ' + lineProfile.displayName;
               statusText.className = "text-center small fw-bold text-success mb-3";
             });
           } else {
-            statusText.innerText = '⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (ไม่ผูกบัญชี LINE)';
+            statusText.innerText = '⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (อ่านข้อมูลได้อย่างเดียว)';
             statusText.className = "text-center small text-secondary mb-3";
           }
         }).catch(err => {
-          statusText.innerText = '❌ LINE Error: ' + err.message;
+          statusText.innerText = '❌ สัญญาณ LINE ขัดข้อง: ' + err.message;
           statusText.className = "text-center small text-danger mb-3";
         });
-      } else {
-        statusText.innerText = '⚠️ ยังไม่ได้ใส่ LIFF ID';
-        statusText.className = "text-center small text-warning mb-3";
       }
     }).catch(err => {
-      statusText.innerText = "❌ ติดต่อ Google Sheet ล้มเหลว โปรดเช็ก URL API";
+      statusText.innerText = "❌ ไม่สามารถติดต่อ Google Sheet ได้ (โปรดเช็ก URL API)";
       statusText.className = "text-center small text-danger mb-3";
     });
   };
-	
-  // --- ฟังก์ชันระบบสมาชิก (Auth) ---
-  // เพิ่มการเก็บ lineUid ไว้ใน Object ของ User	
+
+  // --- Auth & Permission ---
   async function doLogin() {
+    const id = document.getElementById('login-id').value;
+    if (!id) return alert('กรุณากรอกรหัสบุคคล');
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
+    
     try {
-      const id = document.getElementById('login-id').value;
-      if (!id) return alert('กรุณากรอก RamaID');
-      
-      const btn = document.getElementById('btn-login');
-      btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
-      
-      const result = await callAPI('login', { 
-        ramaId: id,
-        lineUid: lineProfile.uid,
-        lineDisplayName: lineProfile.displayName
-      });
-      
+      const result = await callAPI('login', { ramaId: id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
       btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
-      
-if (result && result.success) {
-    currentUser = result.data;
-    // เก็บ UID ที่ได้จาก LINE (ถ้ามี) ไว้ใน currentUser
-    currentUser.lineUid = lineProfile.uid || ""; 
-    
-    document.getElementById('display-name').innerText = currentUser.name;
-    // ...
-    showView('view-main');
-    checkLeavePermission(); // เรียกฟังก์ชันเช็กสิทธิ์ทันทีหลัง Login
-  }
-}
-
-// ฟังก์ชันเช็กสิทธิ์การลา
-function checkLeavePermission() {
-  const btnNext = document.getElementById('btn-next');
-  const alertBox = document.getElementById('line-warning'); // สร้าง div นี้รอไว้ใน HTML
-  
-  if (!currentUser.lineUid) {
-    btnNext.disabled = true;
-    btnNext.innerText = "จำกัดสิทธิ์เฉพาะการ Login ผ่าน LINE";
-    if(alertBox) alertBox.classList.remove('hidden');
-  } else {
-    btnNext.disabled = false;
-    btnNext.innerText = "ถัดไป (ระบุช่วงเวลาลาตรวจ)";
-    if(alertBox) alertBox.classList.add('hidden');
-  }
-}
-	function logout() { 
-    currentUser = null; 
-    document.getElementById('login-id').value = ''; 
-    showView('view-login'); 
+      if (result && result.success) {
+        currentUser = result.data;
+        currentUser.lineUid = lineProfile.uid || ""; 
+        document.getElementById('display-name').innerText = currentUser.name;
+        document.getElementById('display-group').innerText = currentUser.group;
+        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
+        showView('view-main');
+        checkLeavePermission();
+      } else { alert(result ? result.message : "Error"); }
+    } catch(err) { alert(err.message); btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ'; }
   }
 
-  // --- ฟังก์ชันวันลาของฉัน (My Leaves) ---
-  async function loadMyLeaves() {
-    const resultsDiv = document.getElementById('my-leave-results');
-    resultsDiv.innerHTML = '<p class="text-center">กำลังโหลดข้อมูล...</p>';
-    showView('view-my-leave');
-
-    const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
-    
-    if (!results || results.length === 0) {
-      resultsDiv.innerHTML = '<div class="alert alert-light text-center border">คุณไม่มีรายการลาที่กำลังจะมาถึง</div>';
-      return;
+  function checkLeavePermission() {
+    const btnNext = document.getElementById('btn-next');
+    const alertBox = document.getElementById('line-warning');
+    if (!currentUser.lineUid) {
+      btnNext.disabled = true; btnNext.innerText = "จำกัดสิทธิ์เฉพาะการ Login ผ่าน LINE";
+      alertBox.classList.remove('hidden');
+    } else {
+      btnNext.disabled = false; btnNext.innerText = "ถัดไป (ระบุช่วงเวลาลาตรวจ)";
+      alertBox.classList.add('hidden');
     }
-
-    let html = '<div class="list-group shadow-sm">';
-    results.forEach(item => {
-      html += `
-        <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
-          <div class="d-flex justify-content-between">
-            <span class="fw-bold text-primary">${item.leaveDate}</span>
-            <span class="badge bg-warning text-dark">${item.leaveCode}</span>
-          </div>
-          <div class="small mt-1 text-muted">ช่วงเวลาลาตรวจ: ${item.exam}</div>
-        </div>`;
-    });
-    html += '</div>';
-    resultsDiv.innerHTML = html;
   }
 
-  // --- ฟังก์ชันกฎการลา (Leave Rules) ---
+  function logout() { currentUser = null; document.getElementById('login-id').value = ''; showView('view-login'); }
+
+  // --- Rules & Calculation ---
   function setupLeaveRules() {
     const type = document.getElementById('leave-type').value;
     const dateInput = document.getElementById('leave-date');
     const durationInput = document.getElementById('leave-duration');
-    const btnNext = document.getElementById('btn-next');
     const hint = document.getElementById('date-hint');
     dateInput.value = ''; durationInput.innerHTML = '';
     
-    if (!type) { 
-      dateInput.disabled = true; durationInput.disabled = true; btnNext.disabled = true; hint.innerText = ''; return; 
-    }
+    if (!type) { dateInput.disabled = true; durationInput.disabled = true; hint.innerText = ''; return; }
 
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
     let minDate, maxDate, durations = [];
 
-    if (type === 'ป่วย') {
-      minDate = today; maxDate = new Date(today); maxDate.setDate(today.getDate() + 1);
-      hint.innerText = 'เลือกได้: วันนี้ - พรุ่งนี้'; durations = [0.5, 1, 2, 3];
-    } else if (type === 'กิจ') {
-      minDate = new Date(today); minDate.setDate(today.getDate() + 1);
-      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
-      hint.innerText = 'เลือกได้: พรุ่งนี้ - 6 เดือนข้างหน้า'; durations = [0.5, 1, 2, 3, 4, 5];
-    } else if (type === 'พักผ่อน' || type === 'ประชุม') {
-      minDate = new Date(today); minDate.setDate(today.getDate() + 2);
-      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
-      hint.innerText = 'เลือกได้: มะรืนนี้ - 6 เดือนข้างหน้า'; durations = [1, 2, 3, 4, 5];
-    } else if (type === 'เรียนเลือก') {
-      minDate = new Date(today); minDate.setDate(today.getDate() + 1);
-      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
-      hint.innerText = 'เลือกได้: พรุ่งนี้ - 6 เดือนข้างหน้า'; for(let i=1; i<=30; i++) durations.push(i);
-    } else if (type === 'ต่างประเทศ') {
-      minDate = new Date(today); minDate.setDate(today.getDate() + 7);
-      maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6);
-      hint.innerText = 'เลือกได้: 7 วันข้างหน้า - 6 เดือนข้างหน้า'; for(let i=1; i<=15; i++) durations.push(i);
-    } else if (type === 'ตรวจ') {
-      minDate = today; 
-	  maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12);
-      hint.innerText = 'เลือกได้: วันนี้ - 1 ปีข้างหน้า'; durations = [1];
-    }
+    if (type === 'ป่วย') { minDate = today; maxDate = new Date(today); maxDate.setDate(today.getDate() + 1); hint.innerText = 'วันนี้-พรุ่งนี้'; durations = [0.5, 1, 2, 3]; }
+    else if (type === 'กิจ') { minDate = new Date(today); minDate.setDate(today.getDate() + 1); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = 'พรุ่งนี้-6เดือน'; durations = [0.5, 1, 2, 3, 4, 5]; }
+    else if (type === 'พักผ่อน' || type === 'ประชุม') { minDate = new Date(today); minDate.setDate(today.getDate() + 2); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = 'มะรืนนี้-6เดือน'; durations = [1, 2, 3, 4, 5]; }
+    else if (type === 'เรียนเลือก') { minDate = new Date(today); minDate.setDate(today.getDate() + 1); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = 'พรุ่งนี้-6เดือน'; for(let i=1; i<=30; i++) durations.push(i); }
+    else if (type === 'ต่างประเทศ') { minDate = new Date(today); minDate.setDate(today.getDate() + 7); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = '7วัน-6เดือน'; for(let i=1; i<=15; i++) durations.push(i); }
+    else if (type === 'ตรวจ') { minDate = today; maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12); hint.innerText = 'วันนี้-1ปี'; durations = [1]; }
 
-    dateInput.min = formatDateStr(minDate);
-    dateInput.max = formatDateStr(maxDate);
-    dateInput.disabled = false;
-    durations.forEach(d => {
-      let opt = document.createElement('option'); opt.value = d; opt.innerText = d + ' วัน';
-      durationInput.appendChild(opt);
-    });
-    durationInput.disabled = false; btnNext.disabled = false;
+    dateInput.min = formatDateStr(minDate); dateInput.max = formatDateStr(maxDate); dateInput.disabled = false;
+    durations.forEach(d => { let opt = document.createElement('option'); opt.value = d; opt.innerText = d + ' วัน'; durationInput.appendChild(opt); });
+    durationInput.disabled = false;
   }
 
   function checkDateValidity() {
     const dateInput = document.getElementById('leave-date');
     if (!dateInput.value) return;
-    const selectedDateStr = dateInput.value;
-    const minDateStr = dateInput.min;
-    const maxDateStr = dateInput.max;
-    if (minDateStr && selectedDateStr < minDateStr) {
-      alert('ไม่อนุญาตให้เลือกวันที่ย้อนหลัง หรือก่อนเงื่อนไขที่กำหนดครับ');
-      dateInput.value = '';
-    } else if (maxDateStr && selectedDateStr > maxDateStr) {
-      alert('ไม่อนุญาตให้เลือกวันที่เกินเงื่อนไขที่กำหนดครับ');
-      dateInput.value = '';
-    }
+    if (dateInput.min && dateInput.value < dateInput.min) { alert('ไม่อนุญาตให้เลือกวันที่ย้อนหลัง'); dateInput.value = ''; }
+    else if (dateInput.max && dateInput.value > dateInput.max) { alert('ไม่อนุญาตให้เลือกวันที่เกินกำหนด'); dateInput.value = ''; }
   }
 
-function getWorkingDays(startDateStr, duration, leaveType) {
-  let days = [];
-  let currentDate = new Date(startDateStr);
-  let daysNeeded = Math.ceil(duration);
-  let safetyNet = 0; 
-  const safeHolidays = systemData.holidays || [];
+  function getWorkingDays(startDateStr, duration, leaveType) {
+    let days = []; let currentDate = new Date(startDateStr); let daysNeeded = Math.ceil(duration); let safetyNet = 0; 
+    const safeHolidays = systemData.holidays || [];
 
-  while (days.length < daysNeeded && safetyNet < 100) {
-    safetyNet++;
-    let dStr = formatDateStr(currentDate);
-    let dayOfWeek = currentDate.getDay(); // 0 = อาทิตย์, 6 = เสาร์
-    let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-    let isHoliday = safeHolidays.includes(dStr);
+    while (days.length < daysNeeded && safetyNet < 100) {
+      safetyNet++;
+      let dStr = formatDateStr(currentDate); let dayOfWeek = currentDate.getDay(); 
+      let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6); let isHoliday = safeHolidays.includes(dStr);
+      
+      if (leaveType === 'ตรวจ') { if (!isHoliday) days.push(dStr); } 
+      else { if (!isWeekend && !isHoliday) days.push(dStr); }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return days;
+  }
+
+  // --- Flow Submit ---
+  function prepareExamSelection() {
+    const startDate = document.getElementById('leave-date').value;
+    const duration = parseFloat(document.getElementById('leave-duration').value);
+    const type = document.getElementById('leave-type').value;
+    if (!startDate) return alert('กรุณาเลือกวันที่');
     
-    if (leaveType === 'ตรวจ') {
-      // ✅ กรณีลาตรวจ: เอาวันเสาร์-อาทิตย์ด้วย แต่ "ไม่เอา" วันหยุดนักขัตฤกษ์
-      if (!isHoliday) { 
-        days.push(dStr); 
-      }
-    } else {
-      // ❌ กรณีลาอื่นๆ: ไม่เอาเสาร์-อาทิตย์ และ ไม่เอาวันหยุดนักขัตฤกษ์
-      if (!isWeekend && !isHoliday) { 
-        days.push(dStr); 
-      }
-    }
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  return days;
-}
-
-  // --- ฟังก์ชันบันทึกข้อมูล (Submit Flow) ---
-function prepareExamSelection() {
-  const startDate = document.getElementById('leave-date').value;
-  const duration = parseFloat(document.getElementById('leave-duration').value);
-  const type = document.getElementById('leave-type').value; // ดึงประเภทการลามาใช้
-  if (!startDate) return alert('กรุณาเลือกวันที่');
-  
-  // ส่ง type เข้าไปคำนวณด้วย
-  calculatedLeaveDays = getWorkingDays(startDate, duration, type);
-	
+    calculatedLeaveDays = getWorkingDays(startDate, duration, type);
     if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้');
 
-    const container = document.getElementById('exam-list-container');
-    container.innerHTML = '';
+    const container = document.getElementById('exam-list-container'); container.innerHTML = '';
     calculatedLeaveDays.forEach((dateStr) => {
       let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
       if (type === 'ป่วย' || type === 'กิจ') {
         html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>`;
-        if (duration >= 1) { html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>`; }
+        if (duration >= 1) html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>`;
       } else {
         html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
                  <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
@@ -516,101 +353,59 @@ function prepareExamSelection() {
   }
 
   function showConfirmView() {
-    document.getElementById('f-name').innerText = currentUser.name;
-    document.getElementById('f-group').innerText = currentUser.group;
-    document.getElementById('f-type').innerText = document.getElementById('leave-type').value;
-    document.getElementById('f-start').innerText = document.getElementById('leave-date').value;
-    document.getElementById('f-dur').innerText = document.getElementById('leave-duration').value + ' วัน';
-    document.getElementById('f-time').innerText = 'สร้างเมื่อ: ' + new Date().toLocaleString('th-TH');
+    document.getElementById('f-name').innerText = currentUser.name; document.getElementById('f-group').innerText = currentUser.group;
+    document.getElementById('f-type').innerText = document.getElementById('leave-type').value; document.getElementById('f-start').innerText = document.getElementById('leave-date').value;
+    document.getElementById('f-dur').innerText = document.getElementById('leave-duration').value + ' วัน'; document.getElementById('f-time').innerText = new Date().toLocaleString('th-TH');
 
     let examHtml = '';
     document.querySelectorAll('.exam-row').forEach(row => {
-      let date = row.getAttribute('data-date');
       let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-      examHtml += `<div>• ${date}: ${checked.join(', ')}</div>`;
+      examHtml += `<div>• ${row.getAttribute('data-date')}: ${checked.join(', ')}</div>`;
     });
     document.getElementById('f-exams').innerHTML = examHtml;
     showView('view-confirm');
   }
 
-async function submitLeave() {
-    const btn = document.getElementById('btn-submit');
-    
-    // 1. เริ่มสถานะการส่ง
-    btn.disabled = true; 
-    btn.innerText = 'กำลังส่ง...';
-
+  async function submitLeave() {
+    const btn = document.getElementById('btn-submit'); btn.disabled = true; btn.innerText = 'กำลังส่ง...';
     try {
       let examDetails = [];
       document.querySelectorAll('.exam-row').forEach(row => {
-        let date = row.getAttribute('data-date');
         let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-        examDetails.push({ date: date, exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+        examDetails.push({ date: row.getAttribute('data-date'), exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
       });
       
-	  // 2. ดึง IP Address (รอจนกว่าจะได้เลข IP มา)
-      let ipAddress = await getClientIP();
+      let ipAddress = await getClientIP(); let deviceStr = getDeviceDetails(); let finalInformer = "";
+      if (lineProfile && lineProfile.displayName) finalInformer = `${lineProfile.displayName},${deviceStr},${ipAddress}`;
+      else finalInformer = `${deviceStr},${ipAddress}`;
       
-      // 3. ประกอบข้อมูล Informer
-      let deviceStr = getDeviceDetails(); // จะได้เป็น "device,OS,browser"
-      let finalInformer = "";
-      
-      // ถ้าระบบมีชื่อ LINE ให้เอาชื่อ LINE ขึ้นก่อน แล้วตามด้วยข้อมูลเครื่องและ IP
-      if (lineProfile && lineProfile.displayName) {
-        finalInformer = `${lineProfile.displayName},${deviceStr},${ipAddress}`;
-      } else {
-        // ถ้าไม่มีชื่อ LINE (เข้าผ่านคอมพิวเตอร์ปกติ) ให้เริ่มที่ข้อมูลเครื่องเลย
-        finalInformer = `${deviceStr},${ipAddress}`;
-      }
-      
-      // 4. เรียก API เพื่อส่งข้อมูล
-      const res = await callAPI('submitLeave', { data: {
-        user: currentUser,
-        leaveCode: document.getElementById('leave-type').value,
-        startDate: document.getElementById('leave-date').value,
-        examDetails: examDetails,
-        informer: finalInformer // <--- ส่งสตริงใหม่ไปบันทึก
-      }});
-      
-      // 5. จัดการผลลัพธ์
-      if (res && res.success) {
-        alert('ส่งข้อมูลสำเร็จ');
-        showView('view-main');
-        document.getElementById('leave-date').value = ''; 
-        setupLeaveRules(); 
-      } else {
-        alert('เกิดข้อผิดพลาด: ' + (res ? res.message : 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'));
-      }
-    } catch (err) {
-      console.error(err);
-      alert('เกิดข้อผิดพลาดในระบบหน้าเว็บ: ' + err.message);
-    } finally {
-      // 6. คืนค่าปุ่มให้กลับมาใช้งานได้เสมอ
-      btn.disabled = false; 
-      btn.innerText = 'ยืนยันและส่งข้อมูล';
-    }
-  }	
-  // --- ฟังก์ชันค้นหา (Search) ---
+      const res = await callAPI('submitLeave', { data: { user: currentUser, leaveCode: document.getElementById('leave-type').value, startDate: document.getElementById('leave-date').value, examDetails: examDetails, informer: finalInformer }});
+      if (res && res.success) { alert('ส่งข้อมูลสำเร็จ'); showView('view-main'); document.getElementById('leave-date').value = ''; setupLeaveRules(); } 
+      else { alert('Error: ' + (res ? res.message : 'No Response')); }
+    } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล'; }
+  }
+
+  // --- Searches ---
+  async function loadMyLeaves() {
+    const resDiv = document.getElementById('my-leave-results'); resDiv.innerHTML = '<p class="text-center">กำลังโหลด...</p>'; showView('view-my-leave');
+    const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+    if (!results || results.length === 0) { resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; return; }
+    let html = '<div class="list-group shadow-sm">';
+    results.forEach(item => { html += `<div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm"><div class="d-flex justify-content-between"><span class="fw-bold text-primary">${item.leaveDate}</span><span class="badge bg-warning text-dark">${item.leaveCode}</span></div><div class="small mt-1 text-muted">ลาตรวจ: ${item.exam}</div></div>`; });
+    resDiv.innerHTML = html + '</div>';
+  }
+
   async function executeSearch() {
-    const date = document.getElementById('search-date').value;
-    if (!date) return alert('กรุณาเลือกวันที่');
+    const date = document.getElementById('search-date').value; if (!date) return alert('เลือกวันที่');
     document.getElementById('search-results').innerHTML = '<p class="text-center mt-3">กำลังค้นหา...</p>';
-    
     const results = await callAPI('searchLeave', { date: date });
-    
-    let html = '';
-    if (!results || results.length === 0) { 
-      html = '<div class="alert alert-warning mt-3">ไม่มีผู้ลาในวันที่ระบุ</div>'; 
-    } else {
-      html = '<div class="list-group mt-3">';
-      results.forEach(r => { 
-        html += `<div class="list-group-item"><strong>${r.name}</strong> <span class="badge bg-secondary">${r.group}</span><br><small class="text-muted">ลา: ${r.leaveCode} | ตรวจ: ${r.exam}</small></div>`; 
-      });
-      html += '</div>';
+    if (!results || results.length === 0) { document.getElementById('search-results').innerHTML = '<div class="alert alert-warning mt-3">ไม่มีผู้ลา</div>'; } 
+    else {
+      let html = '<div class="list-group mt-3">';
+      results.forEach(r => { html += `<div class="list-group-item"><strong>${r.name}</strong> <span class="badge bg-secondary">${r.group}</span><br><small class="text-muted">ลา: ${r.leaveCode} | ตรวจ: ${r.exam}</small></div>`; });
+      document.getElementById('search-results').innerHTML = html + '</div>';
     }
-    document.getElementById('search-results').innerHTML = html;
   }
 </script>
-
 </body>
 </html>
