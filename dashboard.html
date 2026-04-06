@@ -3,204 +3,436 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>สรุปการลาของหน่วยโรคผิวหนัง</title>
+  <title>ระบบลางาน สาขาโรควิชาผิวหนัง</title>
+  
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
   <style>
-    /* CSS พื้นฐาน (Light Mode) */
-    body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; transition: background-color 0.3s; }
-    .header-panel { background: linear-gradient(135deg, #20c997 0%, #12a378 100%); color: white; padding: 20px; border-radius: 0 0 15px 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
-    .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow-x: auto; transition: background-color 0.3s; }
-    .badge-leave { font-size: 0.85em; padding: 5px 10px; }
-    th { white-space: nowrap; background-color: #f1f4f9 !important; transition: background-color 0.3s; }
-    td { vertical-align: middle; white-space: nowrap; }
-    .timestamp-text { font-size: 0.8em; color: #888; }
-    .btn-theme-toggle { position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.9em; backdrop-filter: blur(5px); }
-    .btn-theme-toggle:hover { background: rgba(255,255,255,0.4); }
-
-    /* CSS สำหรับ Dark Mode อัตโนมัติ */
-    [data-bs-theme="dark"] body { background-color: #121212; }
-    [data-bs-theme="dark"] .header-panel { background: linear-gradient(135deg, #198754 0%, #0f5132 100%); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-    [data-bs-theme="dark"] .table-container { background-color: #1e1e1e; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-    [data-bs-theme="dark"] th { background-color: #2c2c2c !important; color: #e0e0e0; }
-    [data-bs-theme="dark"] .text-success { color: #28a745 !important; }
-    [data-bs-theme="dark"] .text-muted { color: #adb5bd !important; }
+    body { background-color: #f0f2f5; font-family: 'Sarabun', sans-serif; transition: background-color 0.3s; }
+    .card { border-radius: 12px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .hidden { display: none !important; }
+    .app-header { background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); color: white; padding: 20px; border-radius: 0 0 20px 20px; }
+    .exam-row { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #0d6efd; }
+    .flex-card { background: white; border-radius: 15px; overflow: hidden; border: 1px solid #ddd; max-width: 350px; margin: 0 auto; }
+    .flex-header { background-color: #00b900; color: white; padding: 15px; text-align: center; font-weight: bold; }
+    .flex-body { padding: 20px; }
+    .flex-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .flex-label { color: #888; }
+    .flex-value { font-weight: bold; text-align: right; }
+    .flex-footer { background: #f8f8f8; padding: 10px; text-align: center; font-size: 12px; color: #999; border-top: 1px dashed #ddd; }
   </style>
 </head>
 <body>
 
-<div class="container-fluid mt-2 mb-5">
-  <div class="header-panel text-center">
-    <button class="btn-theme-toggle" onclick="toggleThemeManual()" id="themeBtn">☀️ โหมดสว่าง</button>
+<div class="container mt-3 mb-5" id="app">
+  
+  <div id="view-login" class="card p-4">
+    <div class="text-center mb-4">
+        <h4 class="fw-bold">ลางานออนไลน์</h4>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.04</span>
+    </div>
     
-    <h3 class="fw-bold mb-0">📊 สรุปการลา หน่วยโรคผิวหนัง</h3>
-    <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลา นับตั้งแต่วันนี้ไป</p>
+    <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
+
+    <div class="mb-3">
+      <label class="form-label small">รหัสบุคคล</label>
+      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="รหัสบุคคล" maxlength="6">
+    </div>
+    
+    <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">ค้นหาข้อมูลการลา</button>
   </div>
 
-  <div class="row mb-3">
-    <div class="col-md-6 mb-2">
-      <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="🔍 ค้นหา ชื่อ หรือ รหัสบุคล..." onkeyup="filterTable()">
+  <div id="view-main" class="hidden">
+    <div class="app-header text-center mb-4">
+      <h5 id="display-name" class="mb-1">ชื่อ-สกุล</h5>
+      <div class="mb-2"><span class="badge bg-light text-primary" id="display-group">Group</span></div>
+      <small id="display-rama-id" class="opacity-75"></small>
     </div>
-    <div class="col-md-6 mb-2">
-      <select id="groupFilter" class="form-select form-select-lg" onchange="filterTable()">
-        <option value="">-- แสดงทุกกลุ่ม --</option>
-        <option value="อาจารย์">อาจารย์ ประจำ/บริการ/พิเศษ</option>
-        <option value="แพทย์ประจำบ้าน">แพทย์ประจำบ้าน</option>
-        <option value="แพทย์ผู้ช่วย">แพทย์ผู้ช่วย Research/Dermsurg</option>
-        <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
-      </select>
+    
+    <div class="card p-3 mb-3">
+      <h5 class="fw-bold text-primary mb-3">กรอกแบบฟอร์มการลา</h5>
+      <div class="mb-3">
+        <label class="fw-bold">ประเภทการลา</label>
+        <select id="leave-type" class="form-select" onchange="setupLeaveRules()">
+          <option value="">-- เลือกประเภท --</option>
+          <option value="ป่วย">ลาป่วย</option>
+          <option value="กิจ">ลากิจ</option>
+          <option value="พักผ่อน">ลาพักผ่อน</option>
+          <option value="เรียนเลือก">ลาเรียนเลือก elective</option>
+          <option value="ประชุม">ลาประชุมในประเทศ</option>
+          <option value="ต่างประเทศ">ลาไปต่างประเทศ</option>
+          <option value="ตรวจ">ลาตรวจคลินิก</option>
+        </select>
+      </div>
+      
+      <div class="mb-3">
+        <label class="fw-bold">วันที่เริ่มต้นลา</label>
+        <input type="date" id="leave-date" class="form-control" onchange="checkDateValidity()" disabled>
+        <small id="date-hint" class="text-danger"></small>
+      </div>
+
+      <div class="mb-3">
+        <label class="fw-bold">จำนวนวันลา</label>
+        <select id="leave-duration" class="form-select" disabled></select>
+      </div>
+
+      <div id="line-warning" class="alert alert-warning small hidden">
+        ⚠️ คุณเข้าใช้งานผ่านเบราว์เซอร์ปกติ ระบบอนุญาตให้ดูข้อมูลได้เท่านั้น หากต้องการลางาน กรุณาเปิดลิงก์นี้ผ่านแอปพลิเคชัน LINE
+      </div>
+
+      <button class="btn btn-primary btn-lg w-100 mb-2" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป (ระบุช่วงเวลาลาตรวจคลินิก)</button>
+    </div>
+    
+    <button class="btn btn-info w-100 mb-3 text-white" style="background-color: #0dcaf0; border: none;" onclick="loadMyLeaves()">📅 วันลาของฉัน (นับจากวันนี้)</button>
+    <button class="btn btn-light text-danger w-100 shadow-sm" onclick="logout()">ออกจากระบบ</button>
+  </div>
+
+  <div id="view-my-leave" class="hidden">
+    <div class="card p-3 mb-3 shadow-sm border-0">
+      <h5 class="fw-bold mb-3 text-info">📅 รายการลาที่กำลังจะมาถึง</h5>
+      <div id="my-leave-results"></div>
+      <button class="btn btn-outline-secondary w-100 mt-4" onclick="showView('view-main')">ย้อนกลับ</button>
     </div>
   </div>
 
-  <div class="table-container">
-    <div id="loading" class="text-center py-4 text-muted">
-      <div class="spinner-border text-success mb-2" role="status"></div><br>
-      กำลังโหลดข้อมูล...
+  <div id="view-exam" class="hidden">
+    <div class="p-2 mb-3"><h5 class="fw-bold">ระบุช่วงเวลาลาตรวจคลินิก</h5></div>
+    <div id="exam-list-container"></div>
+    <div class="d-flex gap-2 mt-4">
+      <button class="btn btn-outline-secondary flex-grow-1" onclick="showView('view-main')">ย้อนกลับ</button>
+      <button class="btn btn-primary flex-grow-1" onclick="showConfirmView()">ตรวจสอบข้อมูล</button>
     </div>
-    
-    <table class="table table-hover d-none align-middle" id="dashboardTable">
-      <thead class="table-light" id="tableHead">
-        <tr>
-          <th>วันที่ลา</th>
-          <th>รหัสบุคคล</th>
-          <th>ชื่อ-สกุล</th>
-          <th>กลุ่ม (Group)</th>
-          <th>ประเภท</th>
-          <th>ช่วงเวลาตรวจ</th>
-          <th>ข้อมูลผู้ทำรายการ (Informer)</th>
-          <th>เวลาบันทึก</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        </tbody>
-    </table>
-    
-    <div id="noData" class="alert alert-warning text-center d-none mt-3 border-0 shadow-sm">
-      ไม่มีรายการขออนุมัติลาที่รออยู่
+  </div>
+
+  <div id="view-confirm" class="hidden">
+    <div class="alert alert-info small text-center mb-3">ตรวจสอบความถูกต้องและบันทึกหน้าจอไว้ก่อนยืนยัน</div>
+    <div class="flex-card mb-4" id="flex-capture">
+        <div class="flex-header">ใบยืนยันขอลางาน</div>
+        <div class="flex-body">
+            <div class="flex-item"><span class="flex-label">ผู้ขอลา</span><span class="flex-value" id="f-name">-</span></div>
+            <div class="flex-item"><span class="flex-label">สายงาน</span><span class="flex-value" id="f-group">-</span></div>
+            <hr>
+            <div class="flex-item"><span class="flex-label">ประเภท</span><span class="flex-value text-primary" id="f-type">-</span></div>
+            <div class="flex-item"><span class="flex-label">เริ่มวันที่</span><span class="flex-value" id="f-start">-</span></div>
+            <div class="flex-item"><span class="flex-label">รวม</span><span class="flex-value" id="f-dur">-</span></div>
+            <div class="mt-3 p-2 bg-light rounded" style="font-size:12px;">
+                <strong>รายละเอียดลาตรวจ:</strong>
+                <div id="f-exams" class="mt-1"></div>
+            </div>
+        </div>
+        <div class="flex-footer">สร้างโดยระบบลางานอัตโนมัติ<br><span id="f-time"></span></div>
     </div>
+    <div class="d-flex flex-column gap-2">
+        <button class="btn btn-success btn-lg shadow-sm" id="btn-submit" onclick="submitLeave()">ยืนยันและส่งข้อมูล</button>
+        <button class="btn btn-link text-secondary" onclick="showView('view-exam')">แก้ไขข้อมูล</button>
+    </div>
+  </div>
+
+  <div id="view-search" class="hidden card p-3">
+    <h5 class="mb-3">ค้นหาข้อมูลการลา</h5>
+    <div class="mb-3"><input type="date" id="search-date" class="form-control"></div>
+    <button class="btn btn-primary w-100 mb-3" onclick="executeSearch()">ค้นหา</button>
+    <div id="search-results"></div>
+    <hr><button class="btn btn-secondary w-100" onclick="showView('view-login')">กลับหน้าแรก</button>
   </div>
 </div>
 
 <script>
-  // ==========================================
-  // 📍 นำ URL ของ Web App Google Apps Script มาวางที่นี่
-  const API_URL = 'https://script.google.com/macros/s/AKfycbz8arUrcqJtHNmReUHe8xMJ5mqn7PNYe2sijWjHzzT2od9V_wXsYvD8_190AzoNfYbd/exec'; 
-  // ==========================================
+  // 📍================ แก้ไขแค่ 2 บรรทัดนี้ ================📍
+    const API_URL = 'https://script.google.com/macros/s/AKfycbz8arUrcqJtHNmReUHe8xMJ5mqn7PNYe2sijWjHzzT2od9V_wXsYvD8_190AzoNfYbd/exec'; 
+    const MY_LIFF_ID = '2009672880-fTIAHxNE';
+  // =====================================================
 
-  let allData = [];
-  let isDarkMode = false;
+  let currentUser = null;
+  let systemData = { holidays: [], leaveTypes: [] };
+  let calculatedLeaveDays = [];
+  let lineProfile = { uid: '', displayName: '' }; 
 
-  // --- ฟังก์ชันจัดการ Dark Mode อัตโนมัติตามเวลา ---
-  function applyThemeByTime() {
-    const currentHour = new Date().getHours();
-    // ถ้าเวลาตั้งแต่ 18:00 น. ถึง 05:59 น. ให้เป็นโหมดมืด
-    if (currentHour >= 18 || currentHour < 6) {
-      setTheme('dark');
-    } else {
-      setTheme('light');
-    }
+  // --- Helpers ---
+  function formatDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
-  // ฟังก์ชันปรับสีหน้าจอ
-  function setTheme(theme) {
-    const htmlTag = document.documentElement;
-    const themeBtn = document.getElementById('themeBtn');
+  function showView(viewId) {
+    document.querySelectorAll('.container > div[id^="view-"]').forEach(el => el.classList.add('hidden'));
+    document.getElementById(viewId).classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
+
+  async function callAPI(action, data = {}) {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, ...data })
+    });
+    return response.json();
+  }
+
+  // --- Device & IP Info ---
+  function getDeviceDetails() {
+    const ua = navigator.userAgent;
+    let browser = "UnknownBrowser"; let os = "UnknownOS"; let device = "Desktop";
+    if (ua.includes("Edg")) browser = "Edge";
+    else if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+    else if (ua.includes("Line")) browser = "LINE_InApp";
     
-    if (theme === 'dark') {
-      htmlTag.setAttribute('data-bs-theme', 'dark');
-      themeBtn.innerText = '🌙 โหมดมืด';
-      isDarkMode = true;
-    } else {
-      htmlTag.setAttribute('data-bs-theme', 'light');
-      themeBtn.innerText = '☀️ โหมดสว่าง';
-      isDarkMode = false;
-    }
+    if (ua.includes("Win")) os = "Windows";
+    else if (ua.includes("Mac")) os = "MacOS";
+    if (ua.includes("Android")) { os = "Android"; device = "Mobile"; }
+    else if (ua.includes("iPhone")) { os = "iOS"; device = "Mobile"; }
+    else if (ua.includes("iPad")) { os = "iOS"; device = "Tablet"; }
+    return `${device},${os},${browser}`;
   }
 
-  // ฟังก์ชันให้ผู้ใช้กดสลับเองได้
-  function toggleThemeManual() {
-    setTheme(isDarkMode ? 'light' : 'dark');
+  async function getClientIP() {
+    const apiSources = ['https://api.ipify.org?format=json', 'https://ipinfo.io/json'];
+    for (let url of apiSources) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (response.ok) { const data = await response.json(); return data.ip || "Unknown IP"; }
+      } catch (e) {}
+    }
+    return "Unknown IP (Blocked)";
   }
 
-  // --- ดึงข้อมูลเมื่อโหลดหน้าเว็บ ---
-  window.onload = async function() {
-    applyThemeByTime(); // เช็กเวลาและเปลี่ยนสีทันทีที่เปิดหน้าเว็บ
+  // --- Init & Tracker ---
+  window.onload = function() {
+    const statusText = document.getElementById('line-status');
+    statusText.innerText = "1/3 กำลังเตรียมระบบ...";
 
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow',
-        body: JSON.stringify({ action: 'getDashboardData' })
-      });
-      const data = await response.json();
-      allData = data;
-      renderTable(allData);
-    } catch (error) {
-      document.getElementById('loading').innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล กรุณาลองใหม่อีกครั้ง</div>';
-      console.error(error);
-    }
+    try { document.getElementById('search-date').value = formatDateStr(new Date()); } catch(e) {}
+
+    statusText.innerText = "2/3 กำลังดึงข้อมูลจากฐานข้อมูล...";
+    callAPI('getSystemData').then(data => {
+      if (data) systemData = data;
+      setupLeaveRules();
+      
+      statusText.innerText = "3/3 กำลังตรวจสอบการเชื่อมต่อ LINE...";
+// 3. โหลด LINE LIFF
+      if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
+        liff.init({ liffId: MY_LIFF_ID }).then(() => {
+          if (liff.isLoggedIn()) {
+            liff.getProfile().then(profile => {
+              lineProfile.uid = profile.userId; lineProfile.displayName = profile.displayName;
+              statusText.innerText = '✅ พร้อมใช้งาน: ' + lineProfile.displayName;
+              statusText.className = "text-center small fw-bold text-success mb-3";
+            });
+          } else {
+            // --- แก้ไขตรงนี้: ให้ระบบดึง IP มาแสดงด้วย ---
+            getClientIP().then(ip => {
+              statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (IP: ${ip})`;
+              statusText.className = "text-center small text-secondary mb-3";
+            });
+          }
+        }).catch(err => {
+          statusText.innerText = '❌ สัญญาณ LINE ขัดข้อง: ' + err.message;
+          statusText.className = "text-center small text-danger mb-3";
+        });
+      }
+    }).catch(err => {
+      statusText.innerText = "❌ ไม่สามารถติดต่อ Google Sheet ได้ (โปรดเช็ก URL API)";
+      statusText.className = "text-center small text-danger mb-3";
+    });
   };
 
-  function renderTable(data) {
-    document.getElementById('loading').classList.add('d-none');
-    const tbody = document.getElementById('tableBody');
-    const table = document.getElementById('dashboardTable');
-    const noData = document.getElementById('noData');
+  // --- Auth & Permission ---
+  async function doLogin() {
+    const id = document.getElementById('login-id').value;
+    if (!id) return alert('กรุณากรอกรหัสบุคคล');
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
     
-    tbody.innerHTML = '';
-
-    if (!data || data.length === 0) {
-      table.classList.add('d-none');
-      noData.classList.remove('d-none');
-      return;
-    }
-
-    table.classList.remove('d-none');
-    noData.classList.add('d-none');
-
-    data.forEach(row => {
-      let badgeClass = 'bg-secondary';
-      if(row.leaveCode === 'ป่วย') badgeClass = 'bg-danger';
-      else if(row.leaveCode === 'กิจ') badgeClass = 'bg-warning text-dark';
-      else if(row.leaveCode === 'พักผ่อน') badgeClass = 'bg-success';
-      else if(row.leaveCode === 'เรียนเลือก' || row.leaveCode === 'ประชุม') badgeClass = 'bg-info text-dark';
-      else if(row.leaveCode === 'ต่างประเทศ') badgeClass = 'bg-primary';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="fw-bold text-success">${row.leaveDate}</td>
-        <td class="text-muted">${row.ramaID}</td>
-        <td class="fw-bold">${row.name}</td>
-        <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
-        <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
-        <td>${row.exam}</td>
-        <td class="small text-info opacity-75">${row.informer}</td>
-        <td class="timestamp-text">${row.timestamp}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+    try {
+      const result = await callAPI('login', { ramaId: id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
+      btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
+      if (result && result.success) {
+        currentUser = result.data;
+        currentUser.lineUid = lineProfile.uid || ""; 
+        document.getElementById('display-name').innerText = currentUser.name;
+        document.getElementById('display-group').innerText = currentUser.group;
+        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
+        showView('view-main');
+        checkLeavePermission();
+      } else { alert(result ? result.message : "Error"); }
+    } catch(err) { alert(err.message); btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ'; }
   }
 
-  function filterTable() {
-    const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const groupFilter = document.getElementById('groupFilter').value; 
+  function checkLeavePermission() {
+    const btnNext = document.getElementById('btn-next');
+    const alertBox = document.getElementById('line-warning');
+    if (!currentUser.lineUid) {
+      btnNext.disabled = true; btnNext.innerText = "จำกัดสิทธิ์เฉพาะการ Login ผ่าน LINE";
+      alertBox.classList.remove('hidden');
+    } else {
+      btnNext.disabled = false; btnNext.innerText = "ถัดไป (ระบุช่วงเวลาลาตรวจ)";
+      alertBox.classList.add('hidden');
+    }
+  }
 
-    const filteredData = allData.filter(row => {
-      const matchSearch = row.name.toLowerCase().includes(searchText) || row.ramaID.includes(searchText);
-      
-      let matchGroup = false;
-      let userGroup = row.group.trim(); 
+  function logout() { currentUser = null; document.getElementById('login-id').value = ''; showView('view-login'); }
 
-      if (groupFilter === "") matchGroup = true;
-      else if (groupFilter === "อาจารย์") matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ", "อาจารย์พิเศษ"].includes(userGroup);
-      else if (groupFilter === "แพทย์ประจำบ้าน") matchGroup = ["แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4"].includes(userGroup);
-      else if (groupFilter === "แพทย์ผู้ช่วย") matchGroup = ["แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup);
-      else matchGroup = userGroup === groupFilter;
+  // --- Rules & Calculation ---
+  function setupLeaveRules() {
+    const type = document.getElementById('leave-type').value;
+    const dateInput = document.getElementById('leave-date');
+    const durationInput = document.getElementById('leave-duration');
+    const hint = document.getElementById('date-hint');
+    dateInput.value = ''; durationInput.innerHTML = '';
+    
+    if (!type) { dateInput.disabled = true; durationInput.disabled = true; hint.innerText = ''; return; }
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    let minDate, maxDate, durations = [];
+
+    if (type === 'ป่วย') { minDate = today; maxDate = new Date(today); maxDate.setDate(today.getDate() + 1); hint.innerText = 'วันนี้-พรุ่งนี้'; durations = [0.5, 1, 2, 3]; }
+    else if (type === 'กิจ') { minDate = new Date(today); minDate.setDate(today.getDate() + 1); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = 'พรุ่งนี้-6เดือน'; durations = [0.5, 1, 2, 3, 4, 5]; }
+    else if (type === 'พักผ่อน' || type === 'ประชุม') { minDate = new Date(today); minDate.setDate(today.getDate() + 2); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = 'มะรืนนี้-6เดือน'; durations = [1, 2, 3, 4, 5]; }
+    else if (type === 'เรียนเลือก') { minDate = new Date(today); minDate.setDate(today.getDate() + 1); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = 'พรุ่งนี้-6เดือน'; for(let i=1; i<=30; i++) durations.push(i); }
+    else if (type === 'ต่างประเทศ') { minDate = new Date(today); minDate.setDate(today.getDate() + 7); maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 6); hint.innerText = '7วัน-6เดือน'; for(let i=1; i<=15; i++) durations.push(i); }
+    else if (type === 'ตรวจ') { minDate = today; maxDate = new Date(today); maxDate.setMonth(today.getMonth() + 12); hint.innerText = 'วันนี้-1ปี'; durations = [1]; }
+
+    dateInput.min = formatDateStr(minDate); dateInput.max = formatDateStr(maxDate); dateInput.disabled = false;
+    durations.forEach(d => { let opt = document.createElement('option'); opt.value = d; opt.innerText = d + ' วัน'; durationInput.appendChild(opt); });
+    durationInput.disabled = false;
+  }
+
+  function checkDateValidity() {
+    const dateInput = document.getElementById('leave-date');
+    if (!dateInput.value) return;
+    if (dateInput.min && dateInput.value < dateInput.min) { alert('ไม่อนุญาตให้เลือกวันที่ย้อนหลัง'); dateInput.value = ''; }
+    else if (dateInput.max && dateInput.value > dateInput.max) { alert('ไม่อนุญาตให้เลือกวันที่เกินกำหนด'); dateInput.value = ''; }
+  }
+
+  function getWorkingDays(startDateStr, duration, leaveType) {
+    let days = []; let currentDate = new Date(startDateStr); let daysNeeded = Math.ceil(duration); let safetyNet = 0; 
+    const safeHolidays = systemData.holidays || [];
+
+    while (days.length < daysNeeded && safetyNet < 100) {
+      safetyNet++;
+      let dStr = formatDateStr(currentDate); let dayOfWeek = currentDate.getDay(); 
+      let isWeekend = (dayOfWeek === 0 || dayOfWeek === 6); let isHoliday = safeHolidays.includes(dStr);
       
-      return matchSearch && matchGroup;
+      if (leaveType === 'ตรวจ') { if (!isHoliday) days.push(dStr); } 
+      else { if (!isWeekend && !isHoliday) days.push(dStr); }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return days;
+  }
+
+  // --- Flow Submit ---
+  function prepareExamSelection() {
+    const startDate = document.getElementById('leave-date').value;
+    const duration = parseFloat(document.getElementById('leave-duration').value);
+    const type = document.getElementById('leave-type').value;
+    if (!startDate) return alert('กรุณาเลือกวันที่');
+    
+    calculatedLeaveDays = getWorkingDays(startDate, duration, type);
+    if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้');
+
+    const container = document.getElementById('exam-list-container'); container.innerHTML = '';
+    calculatedLeaveDays.forEach((dateStr) => {
+      let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
+      if (type === 'ป่วย' || type === 'กิจ') {
+        html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>`;
+        if (duration >= 1) html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>`;
+      } else {
+        html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
+                 <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
+                 <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
+      }
+      container.innerHTML += html + '</div>';
     });
+    showView('view-exam');
+  }
 
-    renderTable(filteredData);
+  function showConfirmView() {
+    document.getElementById('f-name').innerText = currentUser.name; document.getElementById('f-group').innerText = currentUser.group;
+    document.getElementById('f-type').innerText = document.getElementById('leave-type').value; document.getElementById('f-start').innerText = document.getElementById('leave-date').value;
+    document.getElementById('f-dur').innerText = document.getElementById('leave-duration').value + ' วัน'; document.getElementById('f-time').innerText = new Date().toLocaleString('th-TH');
+
+    let examHtml = '';
+    document.querySelectorAll('.exam-row').forEach(row => {
+      let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
+      examHtml += `<div>• ${row.getAttribute('data-date')}: ${checked.join(', ')}</div>`;
+    });
+    document.getElementById('f-exams').innerHTML = examHtml;
+    showView('view-confirm');
+  }
+
+  async function submitLeave() {
+    const btn = document.getElementById('btn-submit'); btn.disabled = true; btn.innerText = 'กำลังส่ง...';
+    try {
+      let examDetails = [];
+      document.querySelectorAll('.exam-row').forEach(row => {
+        let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
+        examDetails.push({ date: row.getAttribute('data-date'), exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+      });
+      
+      let ipAddress = await getClientIP(); let deviceStr = getDeviceDetails(); let finalInformer = "";
+      if (lineProfile && lineProfile.displayName) finalInformer = `${lineProfile.displayName},${deviceStr},${ipAddress}`;
+      else finalInformer = `${deviceStr},${ipAddress}`;
+      
+      const res = await callAPI('submitLeave', { data: { user: currentUser, leaveCode: document.getElementById('leave-type').value, startDate: document.getElementById('leave-date').value, examDetails: examDetails, informer: finalInformer }});
+      if (res && res.success) { alert('ส่งข้อมูลสำเร็จ'); showView('view-main'); document.getElementById('leave-date').value = ''; setupLeaveRules(); } 
+      else { alert('Error: ' + (res ? res.message : 'No Response')); }
+    } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล'; }
+  }
+
+  // --- Searches ---
+  async function loadMyLeaves() {
+    const resDiv = document.getElementById('my-leave-results'); 
+    resDiv.innerHTML = '<p class="text-center">กำลังโหลด...</p>'; 
+    showView('view-my-leave');
+    
+    try {
+      const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+      
+      if (!results || results.length === 0) { 
+        resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; 
+        return; 
+      }
+
+      // --- เพิ่มการเรียงลำดับข้อมูลตามวันที่ (น้อยไปมาก) ---
+      results.sort((a, b) => new Date(a.leaveDate) - new Date(b.leaveDate));
+
+      let html = '<div class="list-group shadow-sm">';
+      results.forEach(item => { 
+        html += `
+          <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
+            <div class="d-flex justify-content-between">
+              <span class="fw-bold text-primary">${item.leaveDate}</span>
+              <span class="badge bg-warning text-dark">${item.leaveCode}</span>
+            </div>
+            <div class="small mt-1 text-muted">ช่วงเวลา: ${item.exam}</div>
+          </div>`; 
+      });
+      resDiv.innerHTML = html + '</div>';
+    } catch (err) {
+      console.error(err);
+      resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    }
+  }
+
+  async function executeSearch() {
+    const date = document.getElementById('search-date').value; if (!date) return alert('เลือกวันที่');
+    document.getElementById('search-results').innerHTML = '<p class="text-center mt-3">กำลังค้นหา...</p>';
+    const results = await callAPI('searchLeave', { date: date });
+    if (!results || results.length === 0) { document.getElementById('search-results').innerHTML = '<div class="alert alert-warning mt-3">ไม่มีผู้ลา</div>'; } 
+    else {
+      let html = '<div class="list-group mt-3">';
+      results.forEach(r => { html += `<div class="list-group-item"><strong>${r.name}</strong> <span class="badge bg-secondary">${r.group}</span><br><small class="text-muted">ลา: ${r.leaveCode} | ตรวจ: ${r.exam}</small></div>`; });
+      document.getElementById('search-results').innerHTML = html + '</div>';
+    }
   }
 </script>
 </body>
