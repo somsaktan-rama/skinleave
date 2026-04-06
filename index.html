@@ -293,6 +293,7 @@
   };
 
   // --- ฟังก์ชันระบบสมาชิก (Auth) ---
+  // เพิ่มการเก็บ lineUid ไว้ใน Object ของ User	
   async function doLogin() {
     try {
       const id = document.getElementById('login-id').value;
@@ -309,23 +310,34 @@
       
       btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
       
-      if (result && result.success) {
-        currentUser = result.data;
-        document.getElementById('display-name').innerText = currentUser.name;
-        document.getElementById('display-group').innerText = currentUser.group;
-        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
-        showView('view-main');
-      } else if (result) { 
-        alert(result.message); 
-      }
-    } catch(err) {
-      alert("มีข้อผิดพลาด: " + err.message);
-      document.getElementById('btn-login').disabled = false;
-      document.getElementById('btn-login').innerText = 'เข้าสู่ระบบ';
-    }
+if (result && result.success) {
+    currentUser = result.data;
+    // เก็บ UID ที่ได้จาก LINE (ถ้ามี) ไว้ใน currentUser
+    currentUser.lineUid = lineProfile.uid || ""; 
+    
+    document.getElementById('display-name').innerText = currentUser.name;
+    // ...
+    showView('view-main');
+    checkLeavePermission(); // เรียกฟังก์ชันเช็กสิทธิ์ทันทีหลัง Login
   }
+}
 
-  function logout() { 
+// ฟังก์ชันเช็กสิทธิ์การลา
+function checkLeavePermission() {
+  const btnNext = document.getElementById('btn-next');
+  const alertBox = document.getElementById('line-warning'); // สร้าง div นี้รอไว้ใน HTML
+  
+  if (!currentUser.lineUid) {
+    btnNext.disabled = true;
+    btnNext.innerText = "จำกัดสิทธิ์เฉพาะการ Login ผ่าน LINE";
+    if(alertBox) alertBox.classList.remove('hidden');
+  } else {
+    btnNext.disabled = false;
+    btnNext.innerText = "ถัดไป (ระบุช่วงเวลาลาตรวจ)";
+    if(alertBox) alertBox.classList.add('hidden');
+  }
+}
+	function logout() { 
     currentUser = null; 
     document.getElementById('login-id').value = ''; 
     showView('view-login'); 
