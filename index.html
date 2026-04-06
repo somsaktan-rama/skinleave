@@ -262,36 +262,52 @@
     }
   }
 
-  // --- เริ่มต้นระบบ (Initialize) ---
+// --- เริ่มต้นระบบ (Initialize) ---
   window.onload = async function() {
-// 📍 1. เพิ่มโค้ด 2 บรรทัดนี้ เพื่อตั้งค่าวันที่ค้นหาให้เป็นวันนี้
-    const today = new Date();
-    document.getElementById('search-date').value = formatDateStr(today);
-	  
-	  try {
-      if(MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
+    
+    // 1. ตั้งค่า default วันที่ค้นหาให้เป็นวันนี้ (ใส่ try-catch ป้องกัน error)
+    try {
+      const today = new Date();
+      document.getElementById('search-date').value = formatDateStr(today);
+    } catch(e) { console.error("Error setting search date:", e); }
+
+    // 2. โหลดข้อมูลระบบ (วันหยุด/ประเภทลา) **ทำก่อนเลยเพื่อป้องกันปุ่มค้าง**
+    try {
+      const data = await callAPI('getSystemData');
+      if (data) systemData = data;
+      setupLeaveRules();
+    } catch(e) {
+      console.error("System Data Error:", e);
+    }
+
+    // 3. ตรวจสอบสถานะ LINE (ทำทีหลังสุด ถ้าระบบ LINE พัง เว็บก็ยังใช้ต่อได้)
+    try {
+      if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
         await liff.init({ liffId: MY_LIFF_ID });
+        
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           lineProfile.uid = profile.userId;
           lineProfile.displayName = profile.displayName;
           document.getElementById('line-status').innerText = '✅ เชื่อมต่อ LINE: ' + lineProfile.displayName;
+          document.getElementById('line-status').className = "text-center small fw-bold text-success mb-3";
         } else {
-          document.getElementById('line-status').innerText = '⚠️ กรุณาเปิดผ่านแอป LINE เพื่อเชื่อมต่อ';
+          // กรณีไม่ได้ล็อกอิน (เปิดผ่าน PC)
+          document.getElementById('line-status').innerText = '⚠️ เข้าใช้งานผ่านเบราว์เซอร์ปกติ (ไม่สามารถผูกบัญชี LINE ได้)';
+          document.getElementById('line-status').className = "text-center small text-secondary mb-3";
         }
       } else {
-         document.getElementById('line-status').innerText = ''; // ซ่อนหากยังไม่ใส่ LIFF ID
+         document.getElementById('line-status').innerText = '⚠️ ยังไม่ได้ตั้งค่า LIFF ID';
+         document.getElementById('line-status').className = "text-center small text-warning mb-3";
       }
     } catch (err) {
       console.error("LIFF Init Error:", err);
-      document.getElementById('line-status').innerText = '❌ เกิดข้อผิดพลาดในการเชื่อมต่อ LINE';
+      // กรณีโดน Adblocker บล็อก หรือเน็ตหลุด
+      document.getElementById('line-status').innerText = '❌ การเชื่อมต่อ LINE ขัดข้อง แต่ยังสามารถดูวันลาได้';
+      document.getElementById('line-status').className = "text-center small text-danger mb-3";
     }
-
-    const data = await callAPI('getSystemData');
-    if (data) systemData = data;
-    setupLeaveRules(); 
   };
-
+	
   // --- ฟังก์ชันระบบสมาชิก (Auth) ---
   // เพิ่มการเก็บ lineUid ไว้ใน Object ของ User	
   async function doLogin() {
