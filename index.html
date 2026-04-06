@@ -262,50 +262,52 @@
     }
   }
 
-// --- เริ่มต้นระบบ (Initialize) ---
-  window.onload = async function() {
-    
-    // 1. ตั้งค่า default วันที่ค้นหาให้เป็นวันนี้ (ใส่ try-catch ป้องกัน error)
+// --- ระบบแกะรอย (Tracker) เพื่อหาจุดค้าง ---
+  window.onload = function() {
+    const statusText = document.getElementById('line-status');
+    statusText.innerText = "1/3 กำลังเตรียมระบบ...";
+
+    // 1. ตั้งวันที่
     try {
       const today = new Date();
       document.getElementById('search-date').value = formatDateStr(today);
-    } catch(e) { console.error("Error setting search date:", e); }
+    } catch(e) {}
 
-    // 2. โหลดข้อมูลระบบ (วันหยุด/ประเภทลา) **ทำก่อนเลยเพื่อป้องกันปุ่มค้าง**
-    try {
-      const data = await callAPI('getSystemData');
+    statusText.innerText = "2/3 กำลังเชื่อมต่อ Google Sheet...";
+    
+    // 2. โหลดฐานข้อมูล
+    callAPI('getSystemData').then(data => {
       if (data) systemData = data;
       setupLeaveRules();
-    } catch(e) {
-      console.error("System Data Error:", e);
-    }
-
-    // 3. ตรวจสอบสถานะ LINE (ทำทีหลังสุด ถ้าระบบ LINE พัง เว็บก็ยังใช้ต่อได้)
-    try {
+      
+      statusText.innerText = "3/3 กำลังตรวจสอบ LINE...";
+      
+      // 3. โหลด LINE LIFF
       if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
-        await liff.init({ liffId: MY_LIFF_ID });
-        
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          lineProfile.uid = profile.userId;
-          lineProfile.displayName = profile.displayName;
-          document.getElementById('line-status').innerText = '✅ เชื่อมต่อ LINE: ' + lineProfile.displayName;
-          document.getElementById('line-status').className = "text-center small fw-bold text-success mb-3";
-        } else {
-          // กรณีไม่ได้ล็อกอิน (เปิดผ่าน PC)
-          document.getElementById('line-status').innerText = '⚠️ เข้าใช้งานผ่านเบราว์เซอร์ปกติ (ไม่สามารถผูกบัญชี LINE ได้)';
-          document.getElementById('line-status').className = "text-center small text-secondary mb-3";
-        }
+        liff.init({ liffId: MY_LIFF_ID }).then(() => {
+          if (liff.isLoggedIn()) {
+            liff.getProfile().then(profile => {
+              lineProfile.uid = profile.userId;
+              lineProfile.displayName = profile.displayName;
+              statusText.innerText = '✅ พร้อมใช้งาน: ' + lineProfile.displayName;
+              statusText.className = "text-center small fw-bold text-success mb-3";
+            });
+          } else {
+            statusText.innerText = '⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (ไม่ผูกบัญชี LINE)';
+            statusText.className = "text-center small text-secondary mb-3";
+          }
+        }).catch(err => {
+          statusText.innerText = '❌ LINE Error: ' + err.message;
+          statusText.className = "text-center small text-danger mb-3";
+        });
       } else {
-         document.getElementById('line-status').innerText = '⚠️ ยังไม่ได้ตั้งค่า LIFF ID';
-         document.getElementById('line-status').className = "text-center small text-warning mb-3";
+        statusText.innerText = '⚠️ ยังไม่ได้ใส่ LIFF ID';
+        statusText.className = "text-center small text-warning mb-3";
       }
-    } catch (err) {
-      console.error("LIFF Init Error:", err);
-      // กรณีโดน Adblocker บล็อก หรือเน็ตหลุด
-      document.getElementById('line-status').innerText = '❌ การเชื่อมต่อ LINE ขัดข้อง แต่ยังสามารถดูวันลาได้';
-      document.getElementById('line-status').className = "text-center small text-danger mb-3";
-    }
+    }).catch(err => {
+      statusText.innerText = "❌ ติดต่อ Google Sheet ล้มเหลว โปรดเช็ก URL API";
+      statusText.className = "text-center small text-danger mb-3";
+    });
   };
 	
   // --- ฟังก์ชันระบบสมาชิก (Auth) ---
