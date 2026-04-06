@@ -38,7 +38,7 @@
 
     <div class="mb-3">
       <label class="form-label small">รหัสบุคคล</label>
-      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="เช่น 012345" maxlength="6">
+      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="รหัสบุคคล" maxlength="6">
     </div>
     
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
@@ -250,14 +250,14 @@
     btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
     
     try {
-      const result = await callAPI('login', { ramaId: id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
+      const result = await callAPI('login', { : id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
       btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
       if (result && result.success) {
         currentUser = result.data;
         currentUser.lineUid = lineProfile.uid || ""; 
         document.getElementById('display-name').innerText = currentUser.name;
         document.getElementById('display-group').innerText = currentUser.group;
-        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
+        document.getElementById('display-rama-id').innerText = 'รหัสบุคคล: ' + currentUser.ramaId;
         showView('view-main');
         checkLeavePermission();
       } else { alert(result ? result.message : "Error"); }
