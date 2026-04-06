@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ลางาน สาขาโรควิชาผิวหนัง</title>
+  <title>ระบบลางาน สาขาโรควิชาผิวหนัง</title>
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -30,14 +30,14 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ลางานออนไลน์</h4>
-        <span class="text-muted">สาขาวิชาโรคผิวหนัง (1.01)</span>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.01</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
 
     <div class="mb-3">
       <label class="form-label small">รหัสบุคคล</label>
-      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="รหัสบุคคล" maxlength="6">
+      <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="เช่น 012345" maxlength="6">
     </div>
     
     <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
@@ -249,14 +249,14 @@
     btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
     
     try {
-      const result = await callAPI('login', { : id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
+      const result = await callAPI('login', { ramaId: id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
       btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
       if (result && result.success) {
         currentUser = result.data;
         currentUser.lineUid = lineProfile.uid || ""; 
         document.getElementById('display-name').innerText = currentUser.name;
         document.getElementById('display-group').innerText = currentUser.group;
-        document.getElementById('display-rama-id').innerText = 'รหัสบุคคล: ' + currentUser.ramaId;
+        document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
         showView('view-main');
         checkLeavePermission();
       } else { alert(result ? result.message : "Error"); }
