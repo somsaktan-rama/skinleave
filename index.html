@@ -30,7 +30,7 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ลางานออนไลน์</h4>
-        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.05</span>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.06</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
@@ -79,7 +79,10 @@
       </div>
 
       <div id="line-warning" class="alert alert-warning small hidden">
-        ⚠️ คุณเข้าใช้งานผ่านเบราว์เซอร์ปกติ ระบบอนุญาตให้ดูข้อมูลได้เท่านั้น หากต้องการลางาน กรุณาเปิด https://liff.line.me/2009672880-fTIAHxNE ผ่าน LINE
+        ⚠️ คุณเข้าใช้งานผ่านเบราว์เซอร์ปกติ ระบบอนุญาตให้ดูข้อมูลได้เท่านั้น หากต้องการลางาน กรุณาเปิด 
+        <a href="https://liff.line.me/2009672880-fTIAHxNE" target="_blank" class="fw-bold text-decoration-underline text-danger">ลิงก์นี้</a> 
+        ผ่านแอปพลิเคชัน LINE
+
       </div>
 
       <button class="btn btn-primary btn-lg w-100 mb-2" id="btn-next" onclick="prepareExamSelection()" disabled>ถัดไป (ระบุช่วงเวลาลาตรวจคลินิก)</button>
@@ -247,14 +250,18 @@
 
   // --- Auth & Permission ---
   async function doLogin() {
-    const id = document.getElementById('login-id').value;
+    const idInput = document.getElementById('login-id'); // ดึงตัวกล่อง Input มาเก็บไว้
+    const id = idInput.value;
+    
     if (!id) return alert('กรุณากรอกรหัสบุคคล');
+    
     const btn = document.getElementById('btn-login');
     btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
     
     try {
       const result = await callAPI('login', { ramaId: id, lineUid: lineProfile.uid, lineDisplayName: lineProfile.displayName });
       btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
+      
       if (result && result.success) {
         currentUser = result.data;
         currentUser.lineUid = lineProfile.uid || ""; 
@@ -263,8 +270,16 @@
         document.getElementById('display-rama-id').innerText = 'RamaID: ' + currentUser.ramaId;
         showView('view-main');
         checkLeavePermission();
-      } else { alert(result ? result.message : "Error"); }
-    } catch(err) { alert(err.message); btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ'; }
+      } else { 
+        alert(result ? result.message : "Error"); 
+        idInput.value = ''; // เคลียร์ค่าออกเมื่อรหัสผิด หรือโดนบัญชีอื่นผูกไปแล้ว
+        idInput.focus(); // นำเคอร์เซอร์กลับไปกระพริบที่ช่องกรอกอัตโนมัติ
+      }
+    } catch(err) { 
+      alert(err.message); 
+      btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ'; 
+      idInput.value = ''; // เคลียร์ค่าออกเมื่อระบบ Error
+    }
   }
 
   function checkLeavePermission() {
