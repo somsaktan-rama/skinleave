@@ -30,7 +30,7 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ลางานออนไลน์</h4>
-        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.03</span>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.04</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
@@ -218,6 +218,7 @@
       setupLeaveRules();
       
       statusText.innerText = "3/3 กำลังตรวจสอบการเชื่อมต่อ LINE...";
+// 3. โหลด LINE LIFF
       if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
         liff.init({ liffId: MY_LIFF_ID }).then(() => {
           if (liff.isLoggedIn()) {
@@ -227,8 +228,11 @@
               statusText.className = "text-center small fw-bold text-success mb-3";
             });
           } else {
-            statusText.innerText = '⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (อ่านข้อมูลได้อย่างเดียว)';
-            statusText.className = "text-center small text-secondary mb-3";
+            // --- แก้ไขตรงนี้: ให้ระบบดึง IP มาแสดงด้วย ---
+            getClientIP().then(ip => {
+              statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (IP: ${ip})`;
+              statusText.className = "text-center small text-secondary mb-3";
+            });
           }
         }).catch(err => {
           statusText.innerText = '❌ สัญญาณ LINE ขัดข้อง: ' + err.message;
