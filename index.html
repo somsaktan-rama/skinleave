@@ -30,7 +30,7 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ลางานออนไลน์</h4>
-        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.07</span>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.08</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
@@ -208,68 +208,58 @@
     return "Unknown IP (Blocked)";
   }
 
-// --- Init & Tracker ---
-  window.onload = function() {
+// --- Init & (Optimize) Tracker ---
+window.onload = async function() {
     const statusText = document.getElementById('line-status');
-    const loginBtn = document.getElementById('btn-login'); // 1. ดึงตัวควบคุมปุ่มมา
-    
-    // 2. ล็อคปุ่มไว้ก่อน ป้องกันคนกดก่อน LINE โหลดเสร็จ
-    loginBtn.disabled = true; 
-    loginBtn.innerText = "รอการเชื่อมต่อ..."; 
+    const loginBtn = document.getElementById('btn-login');
 
-    statusText.innerText = "1/3 กำลังเตรียมระบบ...";
+    // 1. ล็อคปุ่มระหว่างโหลด
+    loginBtn.disabled = true;
+    loginBtn.innerText = "กำลังเตรียมระบบ...";
+    statusText.innerText = "กำลังตรวจสอบการเชื่อมต่อ...";
 
     try { document.getElementById('search-date').value = formatDateStr(new Date()); } catch(e) {}
 
-    statusText.innerText = "2/3 กำลังดึงข้อมูลจากฐานข้อมูล...";
+    // 🔴 งานที่ 1: ดึงข้อมูลจาก Google Sheet (สั่งให้วิ่งไปดึงข้อมูลเลย โดยไม่ต้องหยุดรอ)
     callAPI('getSystemData').then(data => {
       if (data) systemData = data;
-      setupLeaveRules();
-      
-      statusText.innerText = "3/3 กำลังตรวจสอบการเชื่อมต่อ LINE...";
-      if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
-        liff.init({ liffId: MY_LIFF_ID }).then(() => {
-          if (liff.isLoggedIn()) {
-            liff.getProfile().then(profile => {
-              lineProfile.uid = profile.userId; lineProfile.displayName = profile.displayName;
-              statusText.innerText = '✅ พร้อมใช้งาน: ' + lineProfile.displayName;
-              statusText.className = "text-center small fw-bold text-success mb-3";
-              
-              // 3. เมื่อดึงชื่อ LINE เสร็จสมบูรณ์ ค่อยปลดล็อคปุ่ม
-              loginBtn.disabled = false;
-              loginBtn.innerText = "เข้าสู่ระบบ";
-            });
-          } else {
-            getClientIP().then(ip => {
-              statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (IP: ${ip})`;
-              statusText.className = "text-center small text-secondary mb-3";
-              
-              // 4. ถ้าเป็นคอมพิวเตอร์ (ไม่ได้ล็อกอิน LINE) ก็ปลดล็อคปุ่มให้เข้าไปดูข้อมูลได้
-              loginBtn.disabled = false;
-              loginBtn.innerText = "เข้าสู่ระบบ";
-            });
-          }
-        }).catch(err => {
-          statusText.innerText = '❌ สัญญาณ LINE ขัดข้อง: ' + err.message;
-          statusText.className = "text-center small text-danger mb-3";
+      setupLeaveRules(); // โหลดวันหยุดเสร็จก็จัดเตรียมฟอร์มเงียบๆ เบื้องหลัง
+    }).catch(err => console.error("Sheet Error:", err));
+
+    // 🟢 งานที่ 2: ตรวจสอบ LINE (ทำพร้อมกับงานที่ 1 เลย ไม่ต้องรอ Sheet โหลดเสร็จ)
+    if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          lineProfile.uid = profile.userId;
+          lineProfile.displayName = profile.displayName;
+          statusText.innerText = '✅ พร้อมใช้งาน: ' + lineProfile.displayName;
+          statusText.className = "text-center small fw-bold text-success mb-3";
+        } else {
+          // ถ้าเป็น PC ให้แสดงสถานะทันที แล้วส่งคำสั่งดึง IP ไปทำเบื้องหลัง (ผู้ใช้จะได้ไม่ต้องรอ)
+          statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป`;
+          statusText.className = "text-center small text-secondary mb-3";
           
-          // ปลดล็อคเผื่อให้เข้าไปดูข้อมูลได้แม้ LINE จะล่ม
-          loginBtn.disabled = false;
-          loginBtn.innerText = "เข้าสู่ระบบ (โหมดอ่าน)";
-        });
-      } else {
-        statusText.innerText = '⚠️ ยังไม่ได้ใส่ LIFF ID';
-        statusText.className = "text-center small text-warning mb-3";
-        loginBtn.disabled = false;
-        loginBtn.innerText = "เข้าสู่ระบบ";
+          getClientIP().then(ip => {
+            statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (IP: ${ip})`;
+          });
+        }
+      } catch (err) {
+        statusText.innerText = '❌ สัญญาณ LINE ขัดข้อง';
+        statusText.className = "text-center small text-danger mb-3";
       }
-    }).catch(err => {
-      statusText.innerText = "❌ ไม่สามารถติดต่อ Google Sheet ได้ (โปรดเช็ก URL API)";
-      statusText.className = "text-center small text-danger mb-3";
-      // กรณีนี้ Sheet ล่ม ปล่อยปุ่มล็อคตายไปเลย เพราะเข้าระบบไม่ได้อยู่ดี
-      loginBtn.innerText = "ระบบขัดข้อง"; 
-    });
+    } else {
+      statusText.innerText = '⚠️ ยังไม่ได้ตั้งค่าระบบ LINE';
+      statusText.className = "text-center small text-warning mb-3";
+    }
+
+    // 3. ปลดล็อคปุ่มทันทีที่เช็ก LINE เสร็จ (ไม่ว่า Google Sheet หรือ IP จะโหลดเสร็จหรือยัง ก็กดเข้าระบบได้เลย)
+    loginBtn.disabled = false;
+    loginBtn.innerText = "เข้าสู่ระบบ";
   };
+  
   // --- Auth & Permission ---
   async function doLogin() {
     const idInput = document.getElementById('login-id'); // ดึงตัวกล่อง Input มาเก็บไว้
