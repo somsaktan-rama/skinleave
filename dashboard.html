@@ -32,7 +32,7 @@
   <div class="header-panel text-center">
     <button class="btn-theme-toggle" onclick="toggleThemeManual()" id="themeBtn">☀️ โหมดสว่าง</button>
     
-    <h3 class="fw-bold mb-0">📊 สรุปการลา หน่วยโรคผิวหนัง</h3>
+    <h3 class="fw-bold mb-0">📊 สรุปการลา หน่วยโรคผิวหนัง 1.01</h3>
     <p class="mb-0 mt-2 opacity-75">แสดงข้อมูลการลา นับตั้งแต่วันนี้ไป</p>
   </div>
 
@@ -88,6 +88,7 @@
 
   let allData = [];
   let isDarkMode = false;
+  let systemData = {};
 
   // --- ฟังก์ชันจัดการ Dark Mode อัตโนมัติตามเวลา ---
   function applyThemeByTime() {
@@ -200,14 +201,21 @@ function renderTable(data) {
   }
   
   function filterTable() {
-    const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const groupFilter = document.getElementById('groupFilter').value; 
+    const searchInput = document.getElementById('searchInput');
+    const searchText = searchInput ? searchInput.value.toLowerCase().trim() : "";
+    const groupFilterNode = document.getElementById('groupFilter');
+    const groupFilter = groupFilterNode ? groupFilterNode.value : "";
 
     const filteredData = allData.filter(row => {
-      const matchSearch = row.name.toLowerCase().includes(searchText) || row.ramaID.includes(searchText);
+      // 1. ค้นหาข้อความ (เพิ่มให้หาจากสถานที่และสถานะได้ด้วย)
+      const matchSearch = (row.name && row.name.toLowerCase().includes(searchText)) || 
+                          (row.ramaID && row.ramaID.includes(searchText)) ||
+                          (row.exam && row.exam.toLowerCase().includes(searchText)) ||
+                          (row.status && row.status.toLowerCase().includes(searchText));
       
+      // 2. ค้นหากลุ่ม (ตามโค้ดเดิมของคุณเป๊ะๆ แค่เพิ่มป้องกัน Error)
       let matchGroup = false;
-      let userGroup = row.group.trim(); 
+      let userGroup = (row.group || "").trim(); 
 
       if (groupFilter === "") matchGroup = true;
       else if (groupFilter === "อาจารย์") matchGroup = ["อาจารย์ประจำ", "อาจารย์สายบริการ", "อาจารย์พิเศษ"].includes(userGroup);
