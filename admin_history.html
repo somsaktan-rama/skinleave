@@ -3,24 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin-ประวัติการแจ้งลา</title>
+  <title>Admin 1.01-จัดการการลา</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f4f7f6; font-family: 'Sarabun', sans-serif; }
-    .header-panel { background: #343a40; color: white; padding: 20px; border-radius: 0 0 15px 15px; }
-    .card-history { border: none; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
-    .card-history:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    body { font-family: 'Sarabun', sans-serif; transition: background-color 0.3s, color 0.3s; }
+    body[data-bs-theme="light"] { background-color: #f4f7f6; }
+    .header-panel { background: #343a40; color: white; padding: 20px; border-radius: 0 0 15px 15px; position: relative; }
+    .card-history { border: none; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; margin-bottom: 1rem; }
+    body[data-bs-theme="dark"] .card-history { background-color: #212529; border: 1px solid #343a40; }
     .status-pending { border-left: 5px solid #ffc107; }
     .status-done { border-left: 5px solid #28a745; opacity: 0.7; }
     .time-tag { font-size: 0.75rem; color: #6c757d; }
+    
+    /* ปุ่มสลับโหมด */
+    .btn-theme { position: absolute; top: 15px; right: 15px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 20px; padding: 5px 15px; font-size: 0.85rem; }
+    .btn-theme:hover { background: rgba(255,255,255,0.1); }
   </style>
 </head>
 <body>
 
-<div class="container py-4">
+<!-- หน้า Login -->
+<div id="login-view" class="container py-5" style="max-width: 400px;">
+  <div class="card p-4 shadow-sm border-0 rounded-4">
+    <h4 class="text-center fw-bold mb-3">Admin Login</h4>
+    <div class="mb-3">
+      <label class="form-label small text-muted">รหัสเจ้าหน้าที่ (RamaID)</label>
+      <input type="tel" id="admin-id" class="form-control form-control-lg text-center" placeholder="กรอกรหัส...">
+    </div>
+    <button id="btn-login" class="btn btn-dark btn-lg w-100" onclick="doAdminLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- หน้า History (ซ่อนไว้จนกว่าจะ Login) -->
+<div id="main-view" class="container py-4 d-none">
   <div class="header-panel mb-4 shadow-sm">
-    <h4 class="mb-0 text-center">📋 แจ้งลาผิวหนังล่าสุด (Admin)</h4>
-    <p class="small text-center opacity-75 mb-0">เรียงตามเวลาที่แจ้งเข้ามา / กรองเฉพาะรายการที่ยังไม่ถึงกำหนด</p>
+    <button class="btn-theme" onclick="toggleTheme()">🌗 Dark Mode</button>
+    <h4 class="mb-1 text-center">📋 จัดการแจ้งลาล่าสุด</h4>
+    <p class="small text-center opacity-75 mb-0" id="admin-info">กำลังโหลด...</p>
   </div>
 
   <div id="loading" class="text-center py-5">
@@ -31,9 +50,55 @@
 </div>
 
 <script>
+  // 🟢 1. ใส่ URL ของ Web App ตรงนี้ (ก๊อปปี้จากหน้า index ก็ได้ครับ)
   const API_URL = 'https://script.google.com/macros/s/AKfycbwmRMQDNTAEL6AxwWGC4WrOYstKO_uLlQJ06sUf_sbzbxPthhi6K5Yb1GX4sKOs6jW4/exec';
+  
+  let currentAdminRole = '';
+  let currentAdminName = '';
 
-  window.onload = loadHistory;
+  // โหลด Theme จากที่เคยตั้งไว้
+  window.onload = () => {
+    const savedTheme = localStorage.getItem('adminTheme') || 'light';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+  };
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-bs-theme') === 'dark';
+    html.setAttribute('data-bs-theme', isDark ? 'light' : 'dark');
+    localStorage.setItem('adminTheme', isDark ? 'light' : 'dark');
+  }
+
+  async function doAdminLogin() {
+    const adminId = document.getElementById('admin-id').value.trim();
+    if (!adminId) return alert('กรุณากรอกรหัส');
+
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'adminLogin', adminId: adminId })
+      });
+      const res = await response.json();
+      
+      if (res.success) {
+        currentAdminRole = res.role; // จะได้ค่า 'admin2' หรือ 'admin4'
+        currentAdminName = res.name;
+        
+        document.getElementById('login-view').classList.add('d-none');
+        document.getElementById('main-view').classList.remove('d-none');
+        document.getElementById('admin-info').innerText = `ผู้ดูแล: ${currentAdminName} (${currentAdminRole})`;
+        
+        loadHistory();
+      } else {
+        alert(res.message);
+      }
+    } catch (e) { alert('การเชื่อมต่อขัดข้อง'); }
+    
+    btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
+  }
 
   async function loadHistory() {
     try {
@@ -58,44 +123,41 @@
     }
 
     items.forEach(item => {
-      // 1. เช็กว่ามีการเลือกชั้นไหนมาบ้างจากคำว่า "📍สถานที่:" ใน details
       const details = item.details || "";
       const hasF2 = details.includes('ชั้น 2');
       const hasF4 = details.includes('ชั้น 4');
 
-      // 2. เช็กสถานะปัจจุบันจากฐานข้อมูล ว่าชั้นไหนเคยกดรับทราบไปแล้วบ้าง
       const status = item.status || "";
       const doneF2 = status.includes('ชั้น 2') || status === 'รับทราบแล้ว';
       const doneF4 = status.includes('ชั้น 4') || status === 'รับทราบแล้ว';
 
-      // 3. สร้างปุ่มกดตามเงื่อนไขชั้น
       let btnHtml = '';
 
-      // กรณีมีชั้น 2
+      // 🟢 ระบบกรองสิทธิ์ปุ่ม (Role-Based Access)
       if (hasF2) {
         if (doneF2) btnHtml += `<span class="badge bg-success me-1 mb-1">✔️ ชั้น 2</span>`;
-        else btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 2', this)">🚩 ชั้น 2</button>`;
+        else if (currentAdminRole === 'admin2') btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 2', this)">🚩 ชั้น 2</button>`;
+        else btnHtml += `<span class="badge bg-secondary me-1 mb-1 opacity-50">🔒 รอชั้น 2</span>`; // admin4 จะเห็นปุ่มชั้น 2 ล็อกอยู่
       }
 
-      // กรณีมีชั้น 4
       if (hasF4) {
         if (doneF4) btnHtml += `<span class="badge bg-success me-1 mb-1">✔️ ชั้น 4</span>`;
-        else btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 4', this)">🚩 ชั้น 4</button>`;
+        else if (currentAdminRole === 'admin4') btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 4', this)">🚩 ชั้น 4</button>`;
+        else btnHtml += `<span class="badge bg-secondary me-1 mb-1 opacity-50">🔒 รอชั้น 4</span>`; // admin2 จะเห็นปุ่มชั้น 4 ล็อกอยู่
       }
 
-      // กรณีไม่ได้เลือกชั้น (อาจเป็นลาประเภทอื่น)
+      // สำหรับใบลาที่ไม่มีชั้นระบุ (เช่น ป่วย/พักผ่อนปกติ) ให้สิทธิ์ Admin ทั้ง 2 คนกดรับทราบได้
       if (!hasF2 && !hasF4) {
         if (status.includes('รับทราบ')) btnHtml = `<span class="badge bg-success">✔️ รับทราบแล้ว</span>`;
         else btnHtml = `<button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="markAsRead('${item.eventId}', 'ทั่วไป', this)">🚩 รับทราบ</button>`;
       }
 
-      // 4. เช็กว่าการ์ดใบนี้เสร็จสมบูรณ์หรือยัง (ชั้นที่ถูกเลือก ต้องโดนกดรับทราบครบแล้ว)
       let isCompletelyDone = false;
       if (!hasF2 && !hasF4 && status.includes('รับทราบ')) isCompletelyDone = true;
       else if ((!hasF2 || doneF2) && (!hasF4 || doneF4)) isCompletelyDone = true;
 
       const card = document.createElement('div');
-      card.className = `col-12 mb-3`;
+      card.className = `col-12`;
       card.innerHTML = `
         <div class="card card-history ${isCompletelyDone ? 'status-done' : 'status-pending'} p-3">
           <div class="d-flex justify-content-between align-items-start">
@@ -103,8 +165,7 @@
               <div class="time-tag">ส่งเมื่อ: ${new Date(item.timestamp).toLocaleString('th-TH')}</div>
               <h5 class="mb-1 fw-bold">${item.name} <small class="text-muted">(${item.ramaId})</small></h5>
               <div class="mb-1"><span class="badge bg-primary">ลา${item.type}</span> 📅 <strong>${item.leaveDate}</strong></div>
-              <div class="small text-secondary"><strong>รายละเอียด:</strong> ${item.details}</div>
-              <div class="small text-info mt-1">👤 ผู้แจ้ง: ${item.informer}</div>
+              <div class="small opacity-75"><strong>รายละเอียด:</strong> ${item.details}</div>
             </div>
             <div class="text-end" style="min-width: 90px;">
               ${btnHtml}
@@ -124,22 +185,12 @@
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        // ส่งตัวแปร floor เพิ่มเข้าไปให้หลังบ้านรู้ว่าชั้นไหนกด
         body: JSON.stringify({ action: 'flagLeave', eventId: eventId, floor: floor })
       });
       const res = await response.json();
-      if (res.success) {
-        loadHistory(); // โหลดใหม่เพื่ออัปเดตสีปุ่ม
-      } else {
-        alert(res.message);
-        btn.disabled = false;
-        btn.innerText = '🚩 ' + floor;
-      }
-    } catch (e) { 
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
-      btn.disabled = false; 
-      btn.innerText = '🚩 ' + floor;
-    }
+      if (res.success) loadHistory();
+      else { alert(res.message); btn.disabled = false; btn.innerText = '🚩 ' + floor; }
+    } catch (e) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); btn.disabled = false; btn.innerText = '🚩 ' + floor; }
   }
 </script>
 </body>
