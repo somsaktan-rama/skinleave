@@ -167,10 +167,10 @@
     window.scrollTo(0,0);
   }
 
-  async function callAPI(action, data = {}) {
+   async function callAPI(action, data = {}) {
     const response = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: action, ...data })
+      body: JSON.stringify({ action: action, ...data }) // ส่งแค่ข้อมูลเพียวๆ
     });
     return response.json();
   }
