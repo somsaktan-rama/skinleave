@@ -140,7 +140,7 @@
     }
   };
 
-  function renderTable(data) {
+function renderTable(data) {
     document.getElementById('loading').classList.add('d-none');
     const tbody = document.getElementById('tableBody');
     const table = document.getElementById('dashboardTable');
@@ -158,6 +158,7 @@
     noData.classList.add('d-none');
 
     data.forEach(row => {
+      // 1. จัดการสี Badge ของประเภทการลา
       let badgeClass = 'bg-secondary';
       if(row.leaveCode === 'ป่วย') badgeClass = 'bg-danger';
       else if(row.leaveCode === 'กิจ') badgeClass = 'bg-warning text-dark';
@@ -165,6 +166,21 @@
       else if(row.leaveCode === 'เรียนเลือก' || row.leaveCode === 'ประชุม') badgeClass = 'bg-info text-dark';
       else if(row.leaveCode === 'ต่างประเทศ') badgeClass = 'bg-primary';
 
+      // 🟢 2. ระบบตรวจสอบ Badge สถานะรับทราบ (ชั้น 2, ชั้น 4)
+      const stat = row.status || ""; 
+      const exam = row.exam || ""; 
+      let statusBadges = '';
+
+      if (stat === 'รับทราบแล้ว') { 
+        statusBadges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>'; 
+      } else if (!exam.includes('ชั้น 2') && !exam.includes('ชั้น 4')) { 
+        statusBadges = stat ? `<span class="badge bg-info">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>'; 
+      } else {
+        if (exam.includes('ชั้น 2')) statusBadges += stat.includes('ชั้น 2') ? '<span class="badge bg-success me-1">✔️ ชั้น 2</span>' : '<span class="badge bg-warning text-dark me-1">⏳ รอชั้น 2</span>';
+        if (exam.includes('ชั้น 4')) statusBadges += stat.includes('ชั้น 4') ? '<span class="badge bg-success">✔️ ชั้น 4</span>' : '<span class="badge bg-warning text-dark">⏳ รอชั้น 4</span>';
+      }
+
+      // 3. สร้างแถวตาราง
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="fw-bold text-success">${row.leaveDate}</td>
@@ -172,14 +188,17 @@
         <td class="fw-bold">${row.name}</td>
         <td><span class="badge border border-secondary text-secondary">${row.group}</span></td>
         <td><span class="badge badge-leave ${badgeClass}">${row.leaveCode}</span></td>
-        <td>${row.exam}</td>
+        <td>
+          <div style="font-size: 0.9em;">${row.exam}</div>
+          <div class="mt-1">${statusBadges}</div> <!-- 🟢 แทรก Badge ไว้ใต้ช่วงเวลาตรวจ -->
+        </td>
         <td class="small text-info opacity-75">${row.informer}</td>
         <td class="timestamp-text">${row.timestamp}</td>
       `;
       tbody.appendChild(tr);
     });
   }
-
+  
   function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const groupFilter = document.getElementById('groupFilter').value; 
