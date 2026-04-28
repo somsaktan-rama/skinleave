@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - ประวัติการแจ้งลา</title>
+  <title>Admin-ประวัติการแจ้งลา</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background-color: #f4f7f6; font-family: 'Sarabun', sans-serif; }
@@ -19,7 +19,7 @@
 
 <div class="container py-4">
   <div class="header-panel mb-4 shadow-sm">
-    <h4 class="mb-0 text-center">📋 รายการแจ้งลาล่าสุด (Admin Only)</h4>
+    <h4 class="mb-0 text-center">📋 แจ้งลาผิวหนังล่าสุด (Admin)</h4>
     <p class="small text-center opacity-75 mb-0">เรียงตามเวลาที่แจ้งเข้ามา / กรองเฉพาะรายการที่ยังไม่ถึงกำหนด</p>
   </div>
 
@@ -58,12 +58,46 @@
     }
 
     items.forEach(item => {
-      const isDone = item.status === 'รับทราบแล้ว';
+      // 1. เช็กว่ามีการเลือกชั้นไหนมาบ้างจากคำว่า "📍สถานที่:" ใน details
+      const details = item.details || "";
+      const hasF2 = details.includes('ชั้น 2');
+      const hasF4 = details.includes('ชั้น 4');
+
+      // 2. เช็กสถานะปัจจุบันจากฐานข้อมูล ว่าชั้นไหนเคยกดรับทราบไปแล้วบ้าง
+      const status = item.status || "";
+      const doneF2 = status.includes('ชั้น 2') || status === 'รับทราบแล้ว';
+      const doneF4 = status.includes('ชั้น 4') || status === 'รับทราบแล้ว';
+
+      // 3. สร้างปุ่มกดตามเงื่อนไขชั้น
+      let btnHtml = '';
+
+      // กรณีมีชั้น 2
+      if (hasF2) {
+        if (doneF2) btnHtml += `<span class="badge bg-success me-1 mb-1">✔️ ชั้น 2</span>`;
+        else btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 2', this)">🚩 ชั้น 2</button>`;
+      }
+
+      // กรณีมีชั้น 4
+      if (hasF4) {
+        if (doneF4) btnHtml += `<span class="badge bg-success me-1 mb-1">✔️ ชั้น 4</span>`;
+        else btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 4', this)">🚩 ชั้น 4</button>`;
+      }
+
+      // กรณีไม่ได้เลือกชั้น (อาจเป็นลาประเภทอื่น)
+      if (!hasF2 && !hasF4) {
+        if (status.includes('รับทราบ')) btnHtml = `<span class="badge bg-success">✔️ รับทราบแล้ว</span>`;
+        else btnHtml = `<button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="markAsRead('${item.eventId}', 'ทั่วไป', this)">🚩 รับทราบ</button>`;
+      }
+
+      // 4. เช็กว่าการ์ดใบนี้เสร็จสมบูรณ์หรือยัง (ชั้นที่ถูกเลือก ต้องโดนกดรับทราบครบแล้ว)
+      let isCompletelyDone = false;
+      if (!hasF2 && !hasF4 && status.includes('รับทราบ')) isCompletelyDone = true;
+      else if ((!hasF2 || doneF2) && (!hasF4 || doneF4)) isCompletelyDone = true;
+
       const card = document.createElement('div');
       card.className = `col-12 mb-3`;
-      
       card.innerHTML = `
-        <div class="card card-history ${isDone ? 'status-done' : 'status-pending'} p-3">
+        <div class="card card-history ${isCompletelyDone ? 'status-done' : 'status-pending'} p-3">
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <div class="time-tag">ส่งเมื่อ: ${new Date(item.timestamp).toLocaleString('th-TH')}</div>
@@ -72,11 +106,8 @@
               <div class="small text-secondary"><strong>รายละเอียด:</strong> ${item.details}</div>
               <div class="small text-info mt-1">👤 ผู้แจ้ง: ${item.informer}</div>
             </div>
-            <div>
-              ${isDone 
-                ? '<span class="badge bg-success">✔️ รับทราบแล้ว</span>' 
-                : `<button class="btn btn-warning btn-sm fw-bold" onclick="markAsRead('${item.eventId}', this)">🚩 รับทราบ</button>`
-              }
+            <div class="text-end" style="min-width: 90px;">
+              ${btnHtml}
             </div>
           </div>
         </div>
@@ -85,21 +116,30 @@
     });
   }
 
-  async function markAsRead(eventId, btn) {
-    if (!confirm('ยืนยันการรับทราบรายการนี้?')) return;
+  async function markAsRead(eventId, floor, btn) {
+    if (!confirm(`ยืนยันการรับทราบรายการนี้${floor === 'ทั่วไป' ? '' : ' สำหรับ ' + floor}?`)) return;
     btn.disabled = true;
-    btn.innerText = 'กำลังบันทึก...';
+    btn.innerText = 'รอ...';
     
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'flagLeave', eventId: eventId })
+        // ส่งตัวแปร floor เพิ่มเข้าไปให้หลังบ้านรู้ว่าชั้นไหนกด
+        body: JSON.stringify({ action: 'flagLeave', eventId: eventId, floor: floor })
       });
       const res = await response.json();
       if (res.success) {
-        loadHistory(); // โหลดใหม่เพื่ออัปเดตสถานะ
+        loadHistory(); // โหลดใหม่เพื่ออัปเดตสีปุ่ม
+      } else {
+        alert(res.message);
+        btn.disabled = false;
+        btn.innerText = '🚩 ' + floor;
       }
-    } catch (e) { alert('เกิดข้อผิดพลาด'); btn.disabled = false; }
+    } catch (e) { 
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
+      btn.disabled = false; 
+      btn.innerText = '🚩 ' + floor;
+    }
   }
 </script>
 </body>
