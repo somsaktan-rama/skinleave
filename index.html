@@ -103,6 +103,24 @@
   <div id="view-exam" class="hidden">
     <div class="p-2 mb-3"><h5 class="fw-bold">ระบุช่วงเวลาลาตรวจคลินิก</h5></div>
     <div id="exam-list-container"></div>
+    
+<!-- 🟢 ส่วนที่เพิ่มใหม่: เลือกสถานที่ -->
+    <div class="card p-3 mt-3 mb-3 border-primary bg-light shadow-sm">
+      <h6 class="fw-bold mb-2 text-primary">สถานที่ออกตรวจ <span class="text-danger">*</span></h6>
+      <div class="d-flex gap-4">
+        <div class="form-check">
+          <input class="form-check-input floor-check" type="checkbox" value="ชั้น 2" id="chk-floor2">
+          <label class="form-check-label" for="chk-floor2">ชั้น 2</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input floor-check" type="checkbox" value="ชั้น 4" id="chk-floor4">
+          <label class="form-check-label" for="chk-floor4">ชั้น 4</label>
+        </div>
+      </div>
+      <small class="text-muted mt-1">(กรุณาเลือกอย่างน้อย 1 ช่อง)</small>
+    </div>
+    <!-- 🟢 สิ้นสุดส่วนที่เพิ่มใหม่ -->    
+    
     <div class="d-flex gap-2 mt-4">
       <button class="btn btn-outline-secondary flex-grow-1" onclick="showView('view-main')">ย้อนกลับ</button>
       <button class="btn btn-primary flex-grow-1" onclick="showConfirmView()">ตรวจสอบข้อมูล</button>
@@ -120,6 +138,9 @@
             <div class="flex-item"><span class="flex-label">ประเภท</span><span class="flex-value text-primary" id="f-type">-</span></div>
             <div class="flex-item"><span class="flex-label">เริ่มวันที่</span><span class="flex-value" id="f-start">-</span></div>
             <div class="flex-item"><span class="flex-label">รวม</span><span class="flex-value" id="f-dur">-</span></div>
+            <!-- 🟢 เพิ่มบรรทัดนี้ -->
+            <div class="flex-item"><span class="flex-label">สถานที่ออกตรวจ</span><span class="flex-value text-success" id="f-floor">-</span></div>
+          
             <div class="mt-3 p-2 bg-light rounded" style="font-size:12px;">
                 <strong>รายละเอียดลาตรวจ:</strong>
                 <div id="f-exams" class="mt-1"></div>
@@ -382,9 +403,22 @@ window.onload = async function() {
   }
 
   function showConfirmView() {
-    document.getElementById('f-name').innerText = currentUser.name; document.getElementById('f-group').innerText = currentUser.group;
-    document.getElementById('f-type').innerText = document.getElementById('leave-type').value; document.getElementById('f-start').innerText = document.getElementById('leave-date').value;
-    document.getElementById('f-dur').innerText = document.getElementById('leave-duration').value + ' วัน'; document.getElementById('f-time').innerText = new Date().toLocaleString('th-TH');
+    // 🟢 เช็กเงื่อนไข: ต้องเลือกอย่างน้อย 1 ชั้น
+    const floorChecks = Array.from(document.querySelectorAll('.floor-check:checked')).map(cb => cb.value);
+    if (floorChecks.length === 0) {
+      alert('กรุณาเลือกสถานที่ออกตรวจ (ชั้น 2 หรือ ชั้น 4) อย่างน้อย 1 ช่องครับ');
+      return;
+    }
+
+    document.getElementById('f-name').innerText = currentUser.name; 
+    document.getElementById('f-group').innerText = currentUser.group;
+    document.getElementById('f-type').innerText = document.getElementById('leave-type').value; 
+    document.getElementById('f-start').innerText = document.getElementById('leave-date').value;
+    document.getElementById('f-dur').innerText = document.getElementById('leave-duration').value + ' วัน'; 
+    document.getElementById('f-time').innerText = new Date().toLocaleString('th-TH');
+    
+    // 🟢 แสดงชั้นที่เลือกในหน้ายืนยัน
+    document.getElementById('f-floor').innerText = floorChecks.join(', ');
 
     let examHtml = '';
     document.querySelectorAll('.exam-row').forEach(row => {
@@ -396,12 +430,21 @@ window.onload = async function() {
   }
 
   async function submitLeave() {
+    // 🟢 ดึงข้อมูลชั้นที่เลือกไว้
+    const floorChecks = Array.from(document.querySelectorAll('.floor-check:checked')).map(cb => cb.value);
+    const floorText = floorChecks.join(' และ ');
+
     const btn = document.getElementById('btn-submit'); btn.disabled = true; btn.innerText = 'กำลังส่ง...';
     try {
       let examDetails = [];
       document.querySelectorAll('.exam-row').forEach(row => {
         let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
-        examDetails.push({ date: row.getAttribute('data-date'), exams: checked.length > 0 ? checked : ['ไม่ได้ระบุ'] });
+        if(checked.length === 0) checked = ['ไม่ได้ระบุ'];
+        
+        // 🟢 ไฮไลท์สำคัญ: แนบข้อมูลสถานที่เข้าไปต่อท้ายช่วงเวลา (Backend จะดึงไปโชว์อัตโนมัติ)
+        checked.push(`📍สถานที่: ${floorText}`);
+
+        examDetails.push({ date: row.getAttribute('data-date'), exams: checked });
       });
       
       let ipAddress = await getClientIP(); let deviceStr = getDeviceDetails(); let finalInformer = "";
@@ -409,7 +452,15 @@ window.onload = async function() {
       else finalInformer = `${deviceStr},${ipAddress}`;
       
       const res = await callAPI('submitLeave', { data: { user: currentUser, leaveCode: document.getElementById('leave-type').value, startDate: document.getElementById('leave-date').value, examDetails: examDetails, informer: finalInformer }});
-      if (res && res.success) { alert('ส่งข้อมูลสำเร็จ'); showView('view-main'); document.getElementById('leave-date').value = ''; setupLeaveRules(); } 
+      if (res && res.success) { 
+        alert('ส่งข้อมูลสำเร็จ'); 
+        showView('view-main'); 
+        document.getElementById('leave-date').value = ''; 
+        
+        // 🟢 ล้างค่า Checkbox ชั้นออกให้พร้อมใช้งานครั้งถัดไป
+        document.querySelectorAll('.floor-check').forEach(cb => cb.checked = false);
+        setupLeaveRules(); 
+      } 
       else { alert('Error: ' + (res ? res.message : 'No Response')); }
     } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล'; }
   }
