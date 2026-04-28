@@ -126,9 +126,9 @@
     applyThemeByTime(); // เช็กเวลาและเปลี่ยนสีทันทีที่เปิดหน้าเว็บ
 
     try {
+  // โค้ดส่วนดึงข้อมูลใน dashboard.html
       const response = await fetch(API_URL, {
         method: 'POST',
-        redirect: 'follow',
         body: JSON.stringify({ action: 'getDashboardData' })
       });
       const data = await response.json();
