@@ -30,11 +30,33 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ลางานออนไลน์</h4>
-        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.09</span>
+        <span class="text-muted">สาขาวิชาโรคผิวหนัง 1.10</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังเตรียมระบบ...</div>
 
+    <!-- 🟢 ส่วนที่ 1: ปุ่ม LINE Login (จะแสดงเมื่อยังไม่ได้ล็อกอิน) -->
+    <div id="line-login-section" class="hidden text-center mb-4">
+      <button class="btn btn-success btn-lg w-100 shadow-sm" style="background-color: #00B900; border: none;" onclick="liff.login()">
+        💬 เข้าสู่ระบบด้วย LINE
+      </button>
+      <small class="text-danger d-block mt-2">**ต้องล็อกอิน LINE เพื่อทำรายการลางาน**</small>
+    </div>
+
+    <!-- 🟢 ส่วนที่ 2: ช่องกรอกรหัส (จะแสดงเมื่อล็อกอิน LINE สำเร็จแล้ว) -->
+    <div id="rama-login-section" class="hidden">
+      <div class="mb-3">
+        <label class="form-label small fw-bold text-primary">ยืนยันรหัส RamaID (เฉพาะตัวเลข)</label>
+        <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="เช่น 012345" maxlength="10">
+      </div>
+      <button class="btn btn-primary btn-lg w-100 mb-3" id="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
+    </div>
+    
+    <hr>
+    <!-- ปุ่มสำหรับคนที่แค่อยากเข้ามาดูข้อมูลเฉยๆ ไม่ล็อกอินก็ได้ -->
+    <button class="btn btn-outline-secondary w-100" onclick="showView('view-search')">🔍 ค้นหาข้อมูลการลา (อ่านอย่างเดียว)</button>
+  </div>
+    
     <div class="mb-3">
       <label class="form-label small">รหัสบุคคล</label>
       <input type="tel" pattern="[0-9]*" inputmode="numeric" id="login-id" class="form-control form-control-lg text-center" placeholder="รหัสบุคคล" maxlength="6">
@@ -228,56 +250,65 @@
     return "Unknown IP (Blocked)";
   }
 
-// --- Init & (Optimize) Tracker ---
-window.onload = async function() {
+// --- Init & Tracker ---
+  window.onload = async function() {
     const statusText = document.getElementById('line-status');
+    const lineLoginSec = document.getElementById('line-login-section');
+    const ramaLoginSec = document.getElementById('rama-login-section');
     const loginBtn = document.getElementById('btn-login');
 
-    // 1. ล็อคปุ่มระหว่างโหลด
     loginBtn.disabled = true;
-    loginBtn.innerText = "กำลังเตรียมระบบ...";
-    statusText.innerText = "กำลังตรวจสอบการเชื่อมต่อ...";
 
     try { document.getElementById('search-date').value = formatDateStr(new Date()); } catch(e) {}
 
-    // 🔴 งานที่ 1: ดึงข้อมูลจาก Google Sheet (สั่งให้วิ่งไปดึงข้อมูลเลย โดยไม่ต้องหยุดรอ)
+    // โหลดฐานข้อมูล
     callAPI('getSystemData').then(data => {
       if (data) systemData = data;
-      setupLeaveRules(); // โหลดวันหยุดเสร็จก็จัดเตรียมฟอร์มเงียบๆ เบื้องหลัง
+      setupLeaveRules();
     }).catch(err => console.error("Sheet Error:", err));
 
-    // 🟢 งานที่ 2: ตรวจสอบ LINE (ทำพร้อมกับงานที่ 1 เลย ไม่ต้องรอ Sheet โหลดเสร็จ)
+    // เช็กสถานะ LINE
     if (MY_LIFF_ID && MY_LIFF_ID !== 'ใส่_LIFF_ID_ของคุณที่นี่') {
       try {
         await liff.init({ liffId: MY_LIFF_ID });
         
         if (liff.isLoggedIn()) {
+          // กรณี: ล็อกอินผ่านแอป LINE หรือเคยกด LINE Login มาแล้ว
           const profile = await liff.getProfile();
           lineProfile.uid = profile.userId;
           lineProfile.displayName = profile.displayName;
-          statusText.innerText = '✅ พร้อมใช้งาน: ' + lineProfile.displayName;
-          statusText.className = "text-center small fw-bold text-success mb-3";
-        } else {
-          // ถ้าเป็น PC ให้แสดงสถานะทันที แล้วส่งคำสั่งดึง IP ไปทำเบื้องหลัง (ผู้ใช้จะได้ไม่ต้องรอ)
-          statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป`;
-          statusText.className = "text-center small text-secondary mb-3";
           
-          getClientIP().then(ip => {
-            statusText.innerText = `⚠️ ใช้งานผ่านคอมพิวเตอร์ทั่วไป (IP: ${ip})`;
-          });
+          statusText.innerHTML = `✅ ยืนยันตัวตน LINE: <b>${lineProfile.displayName}</b>`;
+          statusText.className = "text-center small fw-bold text-success mb-3";
+          
+          // โชว์ช่องกรอกรหัส ซ่อนปุ่ม LINE
+          lineLoginSec.classList.add('hidden');
+          ramaLoginSec.classList.remove('hidden');
+          loginBtn.disabled = false;
+        } else {
+          // กรณี: เปิดในคอม แล้วยังไม่ได้ล็อกอิน
+          statusText.innerText = `⚠️ คุณยังไม่ได้เข้าสู่ระบบ LINE`;
+          statusText.className = "text-center small fw-bold text-danger mb-3";
+          
+          // โชว์ปุ่ม LINE Login บังคับให้กด
+          lineLoginSec.classList.remove('hidden');
+          ramaLoginSec.classList.add('hidden');
         }
       } catch (err) {
         statusText.innerText = '❌ สัญญาณ LINE ขัดข้อง';
         statusText.className = "text-center small text-danger mb-3";
+        // ปล่อยให้เข้าไปกรอกรหัสได้ แต่ทำรายการลาไม่ได้
+        lineLoginSec.classList.add('hidden');
+        ramaLoginSec.classList.remove('hidden');
+        loginBtn.disabled = false;
       }
     } else {
       statusText.innerText = '⚠️ ยังไม่ได้ตั้งค่าระบบ LINE';
       statusText.className = "text-center small text-warning mb-3";
+      lineLoginSec.classList.add('hidden');
+      ramaLoginSec.classList.remove('hidden');
+      loginBtn.disabled = false;
     }
-
-    // 3. ปลดล็อคปุ่มทันทีที่เช็ก LINE เสร็จ (ไม่ว่า Google Sheet หรือ IP จะโหลดเสร็จหรือยัง ก็กดเข้าระบบได้เลย)
-    loginBtn.disabled = false;
-    loginBtn.innerText = "เข้าสู่ระบบ";
   };
   
   // --- Auth & Permission ---
