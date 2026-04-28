@@ -31,7 +31,7 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ระบบลางานออนไลน์</h4>
-        <span class="text-muted">สาขาโรคผิวหนัง 1.11</span>
+        <span class="text-muted">สาขาโรคผิวหนัง 1.12</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังตรวจสอบการเชื่อมต่อ...</div>
@@ -488,7 +488,7 @@
     } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล'; }
   }
 
-  // --- Searches ---
+// --- อัปเดตฟังก์ชัน loadMyLeaves ---
   async function loadMyLeaves() {
     const resDiv = document.getElementById('my-leave-results'); 
     resDiv.innerHTML = '<p class="text-center">กำลังโหลด...</p>'; 
@@ -496,33 +496,38 @@
     
     try {
       const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
-      
       if (!results || results.length === 0) { 
         resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; 
         return; 
       }
-
-      // --- เพิ่มการเรียงลำดับข้อมูลตามวันที่ (น้อยไปมาก) ---
       results.sort((a, b) => new Date(a.leaveDate) - new Date(b.leaveDate));
 
       let html = '<div class="list-group shadow-sm">';
       results.forEach(item => { 
+        // 🟢 ระบบตรวจสอบ Badge สถานะ
+        const stat = item.status || ""; const exam = item.exam || ""; let badges = '';
+        if (stat === 'รับทราบแล้ว') { badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>'; }
+        else if (!exam.includes('ชั้น 2') && !exam.includes('ชั้น 4')) { badges = stat ? `<span class="badge bg-info">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>'; }
+        else {
+          if (exam.includes('ชั้น 2')) badges += stat.includes('ชั้น 2') ? '<span class="badge bg-success me-1">✔️ ชั้น 2</span>' : '<span class="badge bg-warning text-dark me-1">⏳ รอชั้น 2</span>';
+          if (exam.includes('ชั้น 4')) badges += stat.includes('ชั้น 4') ? '<span class="badge bg-success">✔️ ชั้น 4</span>' : '<span class="badge bg-warning text-dark">⏳ รอชั้น 4</span>';
+        }
+
         html += `
           <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between mb-1">
               <span class="fw-bold text-primary">${item.leaveDate}</span>
-              <span class="badge bg-warning text-dark">${item.leaveCode}</span>
+              <span class="badge bg-primary">${item.leaveCode}</span>
             </div>
-            <div class="small mt-1 text-muted">ช่วงเวลา: ${item.exam}</div>
+            <div class="small text-muted mb-2">ช่วงเวลา: ${exam}</div>
+            <div class="text-end">${badges}</div>
           </div>`; 
       });
       resDiv.innerHTML = html + '</div>';
-    } catch (err) {
-      console.error(err);
-      resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
-    }
+    } catch (err) { resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>'; }
   }
 
+  // --- อัปเดตฟังก์ชัน executeSearch ---
   async function executeSearch() {
     const date = document.getElementById('search-date').value; if (!date) return alert('เลือกวันที่');
     document.getElementById('search-results').innerHTML = '<p class="text-center mt-3">กำลังค้นหา...</p>';
@@ -530,7 +535,26 @@
     if (!results || results.length === 0) { document.getElementById('search-results').innerHTML = '<div class="alert alert-warning mt-3">ไม่มีผู้ลา</div>'; } 
     else {
       let html = '<div class="list-group mt-3">';
-      results.forEach(r => { html += `<div class="list-group-item"><strong>${r.name}</strong> <span class="badge bg-secondary">${r.group}</span><br><small class="text-muted">ลา: ${r.leaveCode} | ตรวจ: ${r.exam}</small></div>`; });
+      results.forEach(r => { 
+        // 🟢 ระบบตรวจสอบ Badge สถานะ
+        const stat = r.status || ""; const exam = r.exam || ""; let badges = '';
+        if (stat === 'รับทราบแล้ว') { badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>'; }
+        else if (!exam.includes('ชั้น 2') && !exam.includes('ชั้น 4')) { badges = stat ? `<span class="badge bg-info">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>'; }
+        else {
+          if (exam.includes('ชั้น 2')) badges += stat.includes('ชั้น 2') ? '<span class="badge bg-success me-1">✔️ ชั้น 2</span>' : '<span class="badge bg-warning text-dark me-1">⏳ รอชั้น 2</span>';
+          if (exam.includes('ชั้น 4')) badges += stat.includes('ชั้น 4') ? '<span class="badge bg-success">✔️ ชั้น 4</span>' : '<span class="badge bg-warning text-dark">⏳ รอชั้น 4</span>';
+        }
+
+        html += `
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+               <strong>${r.name}</strong> 
+               <span class="badge bg-secondary">${r.group}</span>
+            </div>
+            <small class="text-muted d-block mt-1">ลา: ${r.leaveCode} | ตรวจ: ${exam}</small>
+            <div class="mt-2">${badges}</div>
+          </div>`; 
+      });
       document.getElementById('search-results').innerHTML = html + '</div>';
     }
   }
