@@ -25,7 +25,7 @@
 <!-- หน้า Login -->
 <div id="login-view" class="container py-5" style="max-width: 400px;">
   <div class="card p-4 shadow-sm border-0 rounded-4">
-    <h4 class="text-center fw-bold mb-3">Admin Login</h4>
+    <h4 class="text-center fw-bold mb-3">เจ้าหน้าที่ลงนัด Login</h4>
     <div class="mb-3">
       <label class="form-label small text-muted">รหัสเจ้าหน้าที่ (RamaID)</label>
       <input type="tel" id="admin-id" class="form-control form-control-lg text-center" placeholder="กรอกรหัส...">
@@ -37,6 +37,7 @@
 <!-- หน้า History (ซ่อนไว้จนกว่าจะ Login) -->
 <div id="main-view" class="container py-4 d-none">
   <div class="header-panel mb-4 shadow-sm">
+    <button class="btn-logout" onclick="doLogout()" style="position: absolute; top: 15px; left: 15px; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 20px; padding: 5px 15px; font-size: 0.85rem;">🚪 ออกจากระบบ</button>    
     <button class="btn-theme" onclick="toggleTheme()">🌗 Dark Mode</button>
     <h4 class="mb-1 text-center">📋 จัดการแจ้งลาล่าสุด</h4>
     <p class="small text-center opacity-75 mb-0" id="admin-info">กำลังโหลด...</p>
@@ -100,6 +101,25 @@
     btn.disabled = false; btn.innerText = 'เข้าสู่ระบบ';
   }
 
+// 🟢 ฟังก์ชันสำหรับออกจากระบบ
+  function doLogout() {
+    if (!confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) return;
+
+    // 1. ล้างค่าตัวแปรในระบบ
+    currentAdminRole = '';
+    currentAdminName = '';
+
+    // 2. ล้างค่าในช่องกรอกรหัส (เพื่อความปลอดภัย)
+    document.getElementById('admin-id').value = '';
+
+    // 3. สลับหน้าจอ กลับไปหน้า Login
+    document.getElementById('main-view').classList.add('d-none');
+    document.getElementById('login-view').classList.remove('d-none');
+
+    // 4. ล้างข้อมูลในการ์ดเดิมออก (ไม่ให้ค้างตอน Login ใหม่)
+    document.getElementById('history-container').innerHTML = '';
+  }
+  
   async function loadHistory() {
     try {
       const response = await fetch(API_URL, {
