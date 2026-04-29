@@ -609,6 +609,68 @@ async function loadMyLeaves() {
     }
   }
 
+// ================= เริ่มต้นฟังก์ชันค้นหาประวัติการลา =================
+  async function executeSearch() {
+    // 1. หารหัสพนักงาน
+    let myId = "";
+    if (typeof currentUser !== 'undefined' && currentUser !== null) {
+      myId = currentUser.ramaId || currentUser.ramaID || currentUser.id || "";
+    }
+    if (!myId) return alert('ไม่พบรหัสผู้ใช้งาน กรุณาล็อกอินใหม่');
+
+    // 2. ดึงค่าจากช่องค้นหา (ถ้าในหน้าเว็บคุณมีช่องให้เลือกเดือน)
+    const monthInput = document.getElementById('search-month'); 
+    const searchMonth = monthInput ? monthInput.value : "";
+
+    // 3. เตรียมพื้นที่แสดงผล
+    const resDiv = document.getElementById('search-results'); // ต้องมี <div id="search-results"></div> ในหน้าเว็บ
+    if (resDiv) resDiv.innerHTML = '<p class="text-center">กำลังค้นหาประวัติ...</p>';
+
+    try {
+      // 4. เรียก API ไปที่หลังบ้าน
+      let results = await callAPI('searchMyLeaves', { ramaId: myId, month: searchMonth });
+      
+      if (results && results.data && Array.isArray(results.data)) results = results.data;
+
+      if (!Array.isArray(results) || results.length === 0) { 
+        if (resDiv) resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่พบประวัติการลา</div>'; 
+        return; 
+      }
+      
+      // เรียงวันที่จาก ล่าสุด ไปหา เก่าสุด
+      results.sort((a, b) => new Date(b.leaveDate) - new Date(a.leaveDate));
+
+      let html = '<div class="list-group shadow-sm">';
+      
+      results.forEach(item => { 
+        const stat = item.status || ""; 
+        const exam = item.exam || ""; 
+        let badges = '';
+
+        if (stat.includes('ยกเลิกสำเร็จ')) badges = '<span class="badge bg-dark">✅ ยกเลิกสำเร็จ</span>';
+        else if (stat.includes('ขอยกเลิก')) badges = '<span class="badge bg-danger">⏳ รออนุมัติยกเลิก</span>';
+        else if (stat.includes('รับทราบแล้ว')) badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>';
+        else badges = stat ? `<span class="badge bg-secondary">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>';
+
+        html += `
+          <div class="list-group-item border-start border-4 border-secondary mb-2 rounded shadow-sm">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="fw-bold text-dark">${item.leaveDate}</span>
+              <span class="badge bg-primary">${item.leaveCode}</span>
+            </div>
+            <div class="small text-muted mb-2">ช่วงเวลา: ${exam}</div>
+            <div class="text-end">${badges}</div>
+          </div>`; 
+      });
+      
+      if (resDiv) resDiv.innerHTML = html + '</div>';
+      
+    } catch (err) { 
+      if (resDiv) resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</div>'; 
+      console.error(err);
+    }
+  }
+  
 </script>
 </body>
 </html>
