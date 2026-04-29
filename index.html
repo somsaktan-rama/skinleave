@@ -609,57 +609,45 @@ async function loadMyLeaves() {
     }
   }
 
-// ================= เริ่มต้นฟังก์ชันค้นหาประวัติการลา =================
+// ================= เริ่มต้นฟังก์ชันค้นหาผู้ลางานประจำวัน =================
   async function executeSearch() {
-    // 1. หารหัสพนักงาน
-    let myId = "";
-    if (typeof currentUser !== 'undefined' && currentUser !== null) {
-      myId = currentUser.ramaId || currentUser.ramaID || currentUser.id || "";
-    }
-    if (!myId) return alert('ไม่พบรหัสผู้ใช้งาน กรุณาล็อกอินใหม่');
+    // 1. ดึงข้อมูลจากช่องเลือกวันที่ 
+    // ⚠️ (ถ้าช่องเลือกวันที่ในเว็บคุณไม่ได้ใช้ id="search-date" ให้เปลี่ยนชื่อให้ตรงกันนะครับ)
+    const dateInput = document.getElementById('search-date'); 
+    const searchDate = dateInput ? dateInput.value : "";
 
-    // 2. ดึงค่าจากช่องค้นหา (ถ้าในหน้าเว็บคุณมีช่องให้เลือกเดือน)
-    const monthInput = document.getElementById('search-month'); 
-    const searchMonth = monthInput ? monthInput.value : "";
+    if (!searchDate) return alert('กรุณาเลือกวันที่ต้องการค้นหา');
 
-    // 3. เตรียมพื้นที่แสดงผล
-    const resDiv = document.getElementById('search-results'); // ต้องมี <div id="search-results"></div> ในหน้าเว็บ
-    if (resDiv) resDiv.innerHTML = '<p class="text-center">กำลังค้นหาประวัติ...</p>';
+    // 2. เตรียมพื้นที่แสดงผล
+    const resDiv = document.getElementById('search-results'); 
+    if (resDiv) resDiv.innerHTML = '<p class="text-center">กำลังค้นหาข้อมูล...</p>';
 
     try {
-      // 4. เรียก API ไปที่หลังบ้าน
-      let results = await callAPI('searchMyLeaves', { ramaId: myId, month: searchMonth });
+      // 3. เรียก API ดึงข้อมูลคนที่ลาในวันนั้น (ไม่ต้องส่งรหัสผู้ใช้)
+      let results = await callAPI('searchLeaveByDate', { date: searchDate });
       
       if (results && results.data && Array.isArray(results.data)) results = results.data;
 
       if (!Array.isArray(results) || results.length === 0) { 
-        if (resDiv) resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่พบประวัติการลา</div>'; 
+        if (resDiv) resDiv.innerHTML = '<div class="alert alert-light text-center border">✅ ไม่มีผู้ลางานในวันที่เลือก</div>'; 
         return; 
       }
-      
-      // เรียงวันที่จาก ล่าสุด ไปหา เก่าสุด
-      results.sort((a, b) => new Date(b.leaveDate) - new Date(a.leaveDate));
 
       let html = '<div class="list-group shadow-sm">';
       
+      // 4. แสดงรายชื่อทุกคนที่ลางานในวันนั้น
       results.forEach(item => { 
         const stat = item.status || ""; 
         const exam = item.exam || ""; 
-        let badges = '';
-
-        if (stat.includes('ยกเลิกสำเร็จ')) badges = '<span class="badge bg-dark">✅ ยกเลิกสำเร็จ</span>';
-        else if (stat.includes('ขอยกเลิก')) badges = '<span class="badge bg-danger">⏳ รออนุมัติยกเลิก</span>';
-        else if (stat.includes('รับทราบแล้ว')) badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>';
-        else badges = stat ? `<span class="badge bg-secondary">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>';
 
         html += `
-          <div class="list-group-item border-start border-4 border-secondary mb-2 rounded shadow-sm">
+          <div class="list-group-item border-start border-4 border-info mb-2 rounded shadow-sm">
             <div class="d-flex justify-content-between mb-1">
-              <span class="fw-bold text-dark">${item.leaveDate}</span>
-              <span class="badge bg-primary">${item.leaveCode}</span>
+              <span class="fw-bold text-dark">👤 ${item.name}</span>
+              <span class="badge bg-primary">ลา${item.leaveCode}</span>
             </div>
-            <div class="small text-muted mb-2">ช่วงเวลา: ${exam}</div>
-            <div class="text-end">${badges}</div>
+            <div class="small text-muted mb-1">ช่วงเวลา: ${exam}</div>
+            <div class="small text-muted" style="font-size: 0.8em;">สถานะ: ${stat || 'รอรับทราบ'}</div>
           </div>`; 
       });
       
@@ -669,8 +657,7 @@ async function loadMyLeaves() {
       if (resDiv) resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</div>'; 
       console.error(err);
     }
-  }
-  
+  }  
 </script>
 </body>
 </html>
