@@ -516,7 +516,7 @@ async function loadMyLeaves() {
       // 🟢 2. ดักจับถ้าข้อมูลไม่ใช่ Array (เช่น เป็น Error) ให้หยุดและไม่ใช้ .sort()
       if (!Array.isArray(results) || results.length === 0) { 
         resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; 
-        console.log("API Error / No Data:", results); // พิมพ์ค่าที่ Error ลง Console เผื่อตรวจสอบ
+       // console.log("API Error / No Data:", results); // พิมพ์ค่าที่ Error ลง Console เผื่อตรวจสอบ
         return; 
       }
       
