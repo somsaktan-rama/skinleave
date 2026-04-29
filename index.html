@@ -31,7 +31,7 @@
   <div id="view-login" class="card p-4">
     <div class="text-center mb-4">
         <h4 class="fw-bold">ระบบลางานออนไลน์</h4>
-        <span class="text-muted">สาขาโรคผิวหนัง 1.14</span>
+        <span class="text-muted">สาขาโรคผิวหนัง 1.15</span>
     </div>
     
     <div id="line-status" class="text-center small text-secondary mb-3">กำลังตรวจสอบการเชื่อมต่อ...</div>
@@ -501,22 +501,34 @@ function prepareExamSelection() {
 
 // ================= เริ่มต้นฟังก์ชันโหลดวันลา =================
 async function loadMyLeaves() {
+    // 🟢 1. ดักจับและค้นหารหัสพนักงานจากทุกตัวแปรที่เป็นไปได้
+    let myId = "";
+    if (typeof currentUser !== 'undefined' && currentUser !== null) {
+      myId = currentUser.ramaId || currentUser.ramaID || currentUser.id || currentUser.userid || "";
+    }
+
+    // 🟢 2. เช็กว่าหารหัสเจอไหม ถ้าไม่เจอให้แจ้งเตือน
+    if (!myId) {
+      alert("ไม่พบรหัสประจำตัว กรุณาล็อกอินใหม่อีกครั้ง หรือเช็กตัวแปรผู้ใช้งานครับ");
+      console.error("User object:", currentUser);
+      return;
+    }
+
     const resDiv = document.getElementById('my-leave-results'); 
     resDiv.innerHTML = '<p class="text-center">กำลังโหลด...</p>'; 
     showView('view-my-leave');
     
     try {
-      let results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+      // 🟢 3. ส่ง myId ที่หามาได้ไปให้หลังบ้าน (รับรองว่าคราวนี้ส่งไปถึงแน่นอน)
+      let results = await callAPI('getMyLeaves', { ramaId: myId });
       
-      // 🟢 1. ดักจับ Error ถ้าหลังบ้านส่งกลับมาเป็น Object ซ้อนกัน
       if (results && results.data && Array.isArray(results.data)) {
         results = results.data;
       }
 
-      // 🟢 2. ดักจับถ้าข้อมูลไม่ใช่ Array (เช่น เป็น Error) ให้หยุดและไม่ใช้ .sort()
       if (!Array.isArray(results) || results.length === 0) { 
         resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; 
-       // console.log("API Error / No Data:", results); // พิมพ์ค่าที่ Error ลง Console เผื่อตรวจสอบ
+        console.log("No data found for ID:", myId); // เช็กใน Console ได้ว่ามันไปค้นหาด้วยรหัสอะไร
         return; 
       }
       
@@ -525,7 +537,7 @@ async function loadMyLeaves() {
       let html = '<div class="list-group shadow-sm">';
       const todayObj = new Date(); 
       todayObj.setHours(0, 0, 0, 0); 
-
+      
       results.forEach(item => { 
         const stat = item.status || ""; 
         const exam = item.exam || ""; 
