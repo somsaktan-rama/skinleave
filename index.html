@@ -400,7 +400,7 @@
   }
 
   // --- Flow Submit ---
-  function prepareExamSelection() {
+function prepareExamSelection() {
     const startDate = document.getElementById('leave-date').value;
     const duration = parseFloat(document.getElementById('leave-duration').value);
     const type = document.getElementById('leave-type').value;
@@ -409,19 +409,31 @@
     calculatedLeaveDays = getWorkingDays(startDate, duration, type);
     if (calculatedLeaveDays.length === 0) return alert('ไม่พบวันทำการที่ลาได้');
 
-    const container = document.getElementById('exam-list-container'); container.innerHTML = '';
+    const container = document.getElementById('exam-list-container'); 
+    container.innerHTML = '';
+    
     calculatedLeaveDays.forEach((dateStr) => {
-      let html = `<div class="exam-row" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
-      if (type === 'ป่วย' || type === 'กิจ') {
-        html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>`;
-        if (duration >= 1) html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>`;
-      } else {
-        html += `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เช้า" checked><label class="form-check-label">เช้า</label></div>
-                 <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="บ่าย"><label class="form-check-label">บ่าย</label></div>
-                 <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="เย็น"><label class="form-check-label">เย็น</label></div>`;
-      }
+      let html = `<div class="exam-row mb-3" data-date="${dateStr}"><strong>${dateStr}</strong><br>`;
+      
+      // 🟢 แสดง Checkbox ทั้ง 3 เวลา (เช้า, บ่าย, เย็น) สำหรับการลาทุกประเภท
+      html += `
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" value="เช้า" checked>
+          <label class="form-check-label">เช้า</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" value="บ่าย">
+          <label class="form-check-label">บ่าย</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" value="เย็น">
+          <label class="form-check-label">เย็น</label>
+        </div>
+      `;
+      
       container.innerHTML += html + '</div>';
     });
+    
     showView('view-exam');
   }
 
