@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin 1.01-จัดการการลา</title>
+  <title>Admin 1.02-จัดการการลา</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { font-family: 'Sarabun', sans-serif; transition: background-color 0.3s, color 0.3s; }
@@ -47,6 +47,16 @@
     <div class="spinner-border text-primary"></div><br>กำลังโหลดประวัติ...
   </div>
 
+  <!-- 🟢 ส่วน Filter กรองตามกลุ่ม -->
+  <div class="mb-3">
+    <select id="group-filter" class="form-select shadow-sm border-primary" onchange="filterHistory()">
+      <option value="">👥 แสดงทั้งหมดทุกกลุ่ม</option>
+      <option value="อาจารย์">👨‍⚕️ กลุ่มอาจารย์</option>
+      <option value="แพทย์">🩺 กลุ่มแพทย์ประจำบ้าน / ผู้ช่วย</option>
+      <option value="เจ้าหน้าที่">💼 กลุ่มเจ้าหน้าที่ / อื่นๆ</option>
+    </select>
+  </div>
+  
   <div id="history-container" class="row"></div>
 </div>
 
@@ -120,15 +130,33 @@
     document.getElementById('history-container').innerHTML = '';
   }
   
+let allHistoryData = []; // ตัวแปรเก็บข้อมูลทั้งหมดก่อนกรอง
+
   async function loadHistory() {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'getAdminHistory' })
       });
-      const data = await response.json();
-      renderHistory(data);
+      allHistoryData = await response.json();
+      filterHistory(); // 🟢 โหลดเสร็จให้เรียกฟังก์ชันกรอง
     } catch (e) { console.error(e); }
+  }
+
+  // 🟢 ฟังก์ชันกรองตาม Group
+  function filterHistory() {
+    const groupFilter = document.getElementById('group-filter').value;
+    
+    const filteredData = allHistoryData.filter(item => {
+      let userGroup = (item.group || "").trim();
+      
+      if (groupFilter === "") return true;
+      else if (groupFilter === "อาจารย์") return ["อาจารย์ประจำ", "อาจารย์สายบริการ", "อาจารย์พิเศษ"].includes(userGroup);
+      else if (groupFilter === "แพทย์") return ["แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4", "แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup);
+      else return !["อาจารย์ประจำ", "อาจารย์สายบริการ", "อาจารย์พิเศษ", "แพทย์ประจำบ้านปี 2", "แพทย์ประจำบ้านปี 3", "แพทย์ประจำบ้านปี 4", "แพทย์ผู้ช่วยวิจัย", "แพทย์ผู้ช่วยอาจารย์"].includes(userGroup); // ที่เหลือถือเป็นเจ้าหน้าที่
+    });
+
+    renderHistory(filteredData);
   }
 
   function renderHistory(items) {
@@ -138,7 +166,7 @@
     container.innerHTML = '';
 
     if (!items || items.length === 0) {
-      container.innerHTML = '<div class="alert alert-light text-center">ไม่มีรายการแจ้งลาใหม่ในขณะนี้</div>';
+      container.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการในหมวดหมู่นี้</div>';
       return;
     }
 
@@ -148,25 +176,23 @@
       const hasF4 = details.includes('ชั้น 4');
 
       const status = item.status || "";
-      const doneF2 = status.includes('ชั้น 2') || status === 'รับทราบแล้ว';
-      const doneF4 = status.includes('ชั้น 4') || status === 'รับทราบแล้ว';
+      const doneF2 = status.includes('ชั้น 2') || status.includes('รับทราบแล้ว');
+      const doneF4 = status.includes('ชั้น 4') || status.includes('รับทราบแล้ว');
 
       let btnHtml = '';
 
-      // 🟢 ระบบกรองสิทธิ์ปุ่ม (Role-Based Access)
       if (hasF2) {
         if (doneF2) btnHtml += `<span class="badge bg-success me-1 mb-1">✔️ ชั้น 2</span>`;
         else if (currentAdminRole === 'admin2') btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 2', this)">🚩 ชั้น 2</button>`;
-        else btnHtml += `<span class="badge bg-secondary me-1 mb-1 opacity-50">🔒 รอชั้น 2</span>`; // admin4 จะเห็นปุ่มชั้น 2 ล็อกอยู่
+        else btnHtml += `<span class="badge bg-secondary me-1 mb-1 opacity-50">🔒 รอชั้น 2</span>`;
       }
 
       if (hasF4) {
         if (doneF4) btnHtml += `<span class="badge bg-success me-1 mb-1">✔️ ชั้น 4</span>`;
         else if (currentAdminRole === 'admin4') btnHtml += `<button class="btn btn-warning btn-sm fw-bold me-1 mb-1 shadow-sm" onclick="markAsRead('${item.eventId}', 'ชั้น 4', this)">🚩 ชั้น 4</button>`;
-        else btnHtml += `<span class="badge bg-secondary me-1 mb-1 opacity-50">🔒 รอชั้น 4</span>`; // admin2 จะเห็นปุ่มชั้น 4 ล็อกอยู่
+        else btnHtml += `<span class="badge bg-secondary me-1 mb-1 opacity-50">🔒 รอชั้น 4</span>`;
       }
 
-      // สำหรับใบลาที่ไม่มีชั้นระบุ (เช่น ป่วย/พักผ่อนปกติ) ให้สิทธิ์ Admin ทั้ง 2 คนกดรับทราบได้
       if (!hasF2 && !hasF4) {
         if (status.includes('รับทราบ')) btnHtml = `<span class="badge bg-success">✔️ รับทราบแล้ว</span>`;
         else btnHtml = `<button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="markAsRead('${item.eventId}', 'ทั่วไป', this)">🚩 รับทราบ</button>`;
@@ -182,10 +208,11 @@
         <div class="card card-history ${isCompletelyDone ? 'status-done' : 'status-pending'} p-3">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <div class="time-tag">ส่งเมื่อ: ${new Date(item.timestamp).toLocaleString('th-TH')}</div>
-              <h5 class="mb-1 fw-bold">${item.name} <small class="text-muted">(${item.ramaId})</small></h5>
+              <div class="time-tag">ส่งเมื่อ: ${item.timestamp}</div>
+              <h5 class="mb-1 fw-bold">${item.name} <span class="badge border border-secondary text-secondary ms-1" style="font-size:0.65em;">${item.group}</span></h5>
               <div class="mb-1"><span class="badge bg-primary">ลา${item.type}</span> 📅 <strong>${item.leaveDate}</strong></div>
               <div class="small opacity-75"><strong>รายละเอียด:</strong> ${item.details}</div>
+              <div class="small mt-1" style="color: #6f42c1; font-weight: 500;">สถานะ: ${status || '⏳ รอรับทราบ'}</div>
             </div>
             <div class="text-end" style="min-width: 90px;">
               ${btnHtml}
@@ -205,13 +232,15 @@
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'flagLeave', eventId: eventId, floor: floor })
+        // 🟢 เพิ่ม currentAdminName ส่งไปด้วยตรงนี้
+        body: JSON.stringify({ action: 'flagLeave', eventId: eventId, floor: floor, adminName: currentAdminName })
       });
       const res = await response.json();
       if (res.success) loadHistory();
       else { alert(res.message); btn.disabled = false; btn.innerText = '🚩 ' + floor; }
     } catch (e) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); btn.disabled = false; btn.innerText = '🚩 ' + floor; }
   }
+  
 </script>
 </body>
 </html>
