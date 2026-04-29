@@ -500,102 +500,96 @@ function prepareExamSelection() {
     } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล'; }
   }
 
-// --- อัปเดตฟังก์ชัน loadMyLeaves ---
-async function loadMyLeaves() {
+// ================= เริ่มต้นฟังก์ชันโหลดวันลา =================
+  async function loadMyLeaves() {
     const resDiv = document.getElementById('my-leave-results'); 
     resDiv.innerHTML = '<p class="text-center">กำลังโหลด...</p>'; 
     showView('view-my-leave');
     
     try {
       const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+      
       if (!results || results.length === 0) { 
-        resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; return; 
+        resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; 
+        return; 
       }
+      
       results.sort((a, b) => new Date(a.leaveDate) - new Date(b.leaveDate));
 
       let html = '<div class="list-group shadow-sm">';
-      const todayObj = new Date(); todayObj.setHours(0,0,0,0); // หาว่าวันนี้คือวันไหน
+      const todayObj = new Date(); 
+      todayObj.setHours(0, 0, 0, 0); 
 
       results.forEach(item => { 
-        const stat = item.status || ""; const exam = item.exam || ""; let badges = '';
+        const stat = item.status || ""; 
+        const exam = item.exam || ""; 
+        let badges = '';
         
-        // --- ส่วนเดิม (โชว์สถานะ) ---
-        if (stat.includes('ยกเลิกสำเร็จ')) { badges = '<span class="badge bg-dark">✅ ยกเลิกสำเร็จ</span>'; }
-        else if (stat.includes('ขอยกเลิก')) { badges = '<span class="badge bg-danger">⏳ รอแอดมินอนุมัติยกเลิก</span>'; }
-        else if (stat === 'รับทราบแล้ว') { badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>'; }
-        else if (!exam.includes('ชั้น 2') && !exam.includes('ชั้น 4')) { badges = stat ? `<span class="badge bg-info">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>'; }
-        else {
-          if (exam.includes('ชั้น 2')) badges += stat.includes('ชั้น 2') ? '<span class="badge bg-success me-1">✔️ ชั้น 2</span>' : '<span class="badge bg-warning text-dark me-1">⏳ รอชั้น 2</span>';
-          if (exam.includes('ชั้น 4')) badges += stat.includes('ชั้น 4') ? '<span class="badge bg-success">✔️ ชั้น 4</span>' : '<span class="badge bg-warning text-dark">⏳ รอชั้น 4</span>';
+        // --- 1. เช็กสถานะเพื่อโชว์ Badge ---
+        if (stat.includes('ยกเลิกสำเร็จ')) { 
+          badges = '<span class="badge bg-dark">✅ ยกเลิกสำเร็จ</span>'; 
+        } else if (stat.includes('ขอยกเลิก')) { 
+          badges = '<span class="badge bg-danger">⏳ รอแอดมินอนุมัติยกเลิก</span>'; 
+        } else if (stat === 'รับทราบแล้ว') { 
+          badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>'; 
+        } else if (!exam.includes('ชั้น 2') && !exam.includes('ชั้น 4')) { 
+          badges = stat ? `<span class="badge bg-info">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>'; 
+        } else {
+          if (exam.includes('ชั้น 2')) {
+            badges += stat.includes('ชั้น 2') ? '<span class="badge bg-success me-1">✔️ ชั้น 2</span>' : '<span class="badge bg-warning text-dark me-1">⏳ รอชั้น 2</span>';
+          }
+          if (exam.includes('ชั้น 4')) {
+            badges += stat.includes('ชั้น 4') ? '<span class="badge bg-success">✔️ ชั้น 4</span>' : '<span class="badge bg-warning text-dark">⏳ รอชั้น 4</span>';
+          }
         }
 
-        // 🟢 ตรวจสอบว่าแสดงปุ่มยกเลิกได้ไหม? (วันที่ต้อง >= วันนี้ และยังไม่เคยขอยกเลิก)
+        // --- 2. เช็กว่าแสดงปุ่ม "ขอยกเลิก" ได้หรือไม่ ---
         let rowDateObj = new Date(item.leaveDate);
         let isFuture = rowDateObj >= todayObj;
         let cancelBtn = '';
+        
         if (isFuture && !stat.includes('ขอยกเลิก') && !stat.includes('ยกเลิกสำเร็จ')) {
           cancelBtn = `<div class="mt-2"><button class="btn btn-sm btn-outline-danger py-0 px-2 shadow-sm" onclick="doRequestCancel('${item.eventId}')">❌ ขอยกเลิกการลา</button></div>`;
         }
 
+        let borderClass = stat.includes('ยกเลิก') ? 'border-dark bg-light' : 'border-info';
+
+        // --- 3. สร้างการ์ดแสดงผล ---
         html += `
-          <div class="list-group-item border-start border-4 ${stat.includes('ยกเลิก') ? 'border-dark bg-light' : 'border-info'} mb-2 rounded shadow-sm">
+          <div class="list-group-item border-start border-4 ${borderClass} mb-2 rounded shadow-sm">
             <div class="d-flex justify-content-between mb-1">
               <span class="fw-bold text-primary">${item.leaveDate}</span>
               <span class="badge bg-primary">${item.leaveCode}</span>
             </div>
             <div class="small text-muted mb-2">ช่วงเวลา: ${exam}</div>
             <div class="text-end">${badges}</div>
-            ${cancelBtn} <!-- 🟢 แสดงปุ่มตรงนี้ -->
+            ${cancelBtn}
           </div>`; 
       });
+      
       resDiv.innerHTML = html + '</div>';
-    } catch (err) { resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาด</div>'; }
-  }
-  
-  // --- อัปเดตฟังก์ชัน executeSearch ---
-  async function executeSearch() {
-    const date = document.getElementById('search-date').value; if (!date) return alert('เลือกวันที่');
-    document.getElementById('search-results').innerHTML = '<p class="text-center mt-3">กำลังค้นหา...</p>';
-    const results = await callAPI('searchLeave', { date: date });
-    if (!results || results.length === 0) { document.getElementById('search-results').innerHTML = '<div class="alert alert-warning mt-3">ไม่มีผู้ลา</div>'; } 
-    else {
-      let html = '<div class="list-group mt-3">';
-      results.forEach(r => { 
-        // 🟢 ระบบตรวจสอบ Badge สถานะ
-        const stat = r.status || ""; const exam = r.exam || ""; let badges = '';
-        if (stat === 'รับทราบแล้ว') { badges = '<span class="badge bg-success">✔️ รับทราบแล้ว</span>'; }
-        else if (!exam.includes('ชั้น 2') && !exam.includes('ชั้น 4')) { badges = stat ? `<span class="badge bg-info">${stat}</span>` : '<span class="badge bg-secondary">⏳ รอรับทราบ</span>'; }
-        else {
-          if (exam.includes('ชั้น 2')) badges += stat.includes('ชั้น 2') ? '<span class="badge bg-success me-1">✔️ ชั้น 2</span>' : '<span class="badge bg-warning text-dark me-1">⏳ รอชั้น 2</span>';
-          if (exam.includes('ชั้น 4')) badges += stat.includes('ชั้น 4') ? '<span class="badge bg-success">✔️ ชั้น 4</span>' : '<span class="badge bg-warning text-dark">⏳ รอชั้น 4</span>';
-        }
-
-        html += `
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
-               <strong>${r.name}</strong> 
-               <span class="badge bg-secondary">${r.group}</span>
-            </div>
-            <small class="text-muted d-block mt-1">ลา: ${r.leaveCode} | ตรวจ: ${exam}</small>
-            <div class="mt-2">${badges}</div>
-          </div>`; 
-      });
-      document.getElementById('search-results').innerHTML = html + '</div>';
+      
+    } catch (err) { 
+      resDiv.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>'; 
+      console.error(err);
     }
   }
 
-// ฟังก์ชันกดขอยกเลิกจากหน้า My Leave
+  // ================= เริ่มต้นฟังก์ชันกดยกเลิก =================
   async function doRequestCancel(eventId) {
     if(!confirm('ยืนยันการ "ขอยกเลิก" การลาของวันนี้ใช่หรือไม่?')) return;
     try {
       const res = await callAPI('requestCancel', {eventId: eventId});
       if(res && res.success) {
         alert('ส่งคำขอยกเลิกสำเร็จ! กรุณารอเจ้าหน้าที่กดยืนยันครับ');
-        loadMyLeaves(); // รีเฟรชหน้า
-      } else { alert(res ? res.message : 'Error'); }
-    } catch(e) { alert('Error: ' + e); }
+        loadMyLeaves(); // โหลดหน้าเว็บใหม่ให้ปุ่มรีเฟรช
+      } else { 
+        alert(res ? res.message : 'เกิดข้อผิดพลาดในการส่งคำขอ'); 
+      }
+    } catch(e) { 
+      alert('การเชื่อมต่อขัดข้อง: ' + e); 
+    }
   }  
-  
 </script>
 </body>
 </html>
