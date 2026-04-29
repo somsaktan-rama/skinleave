@@ -500,16 +500,23 @@ function prepareExamSelection() {
   }
 
 // ================= เริ่มต้นฟังก์ชันโหลดวันลา =================
-  async function loadMyLeaves() {
+async function loadMyLeaves() {
     const resDiv = document.getElementById('my-leave-results'); 
     resDiv.innerHTML = '<p class="text-center">กำลังโหลด...</p>'; 
     showView('view-my-leave');
     
     try {
-      const results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
+      let results = await callAPI('getMyLeaves', { ramaId: currentUser.ramaId });
       
-      if (!results || results.length === 0) { 
+      // 🟢 1. ดักจับ Error ถ้าหลังบ้านส่งกลับมาเป็น Object ซ้อนกัน
+      if (results && results.data && Array.isArray(results.data)) {
+        results = results.data;
+      }
+
+      // 🟢 2. ดักจับถ้าข้อมูลไม่ใช่ Array (เช่น เป็น Error) ให้หยุดและไม่ใช้ .sort()
+      if (!Array.isArray(results) || results.length === 0) { 
         resDiv.innerHTML = '<div class="alert alert-light text-center border">ไม่มีรายการลาที่กำลังจะมาถึง</div>'; 
+        console.log("API Error / No Data:", results); // พิมพ์ค่าที่ Error ลง Console เผื่อตรวจสอบ
         return; 
       }
       
