@@ -452,7 +452,11 @@ function prepareExamSelection() {
     // 🟢 เช็กเงื่อนไข: ต้องเลือกอย่างน้อย 1 ชั้น
     const floorChecks = Array.from(document.querySelectorAll('.floor-check:checked')).map(cb => cb.value);
     if (floorChecks.length === 0) {
-      alert('กรุณาเลือกสถานที่ออกตรวจ (ชั้น 2 หรือ ชั้น 4) อย่างน้อย 1 ช่องครับ');
+      Swal.fire({
+        icon: 'warning',
+        title: 'แจ้งเตือน',
+        text: 'กรุณาเลือกสถานที่ออกตรวจ (ชั้น 2 หรือ ชั้น 4) อย่างน้อย 1 ช่องครับ'
+      });
       return;
     }
 
@@ -465,6 +469,11 @@ function prepareExamSelection() {
     
     // 🟢 แสดงชั้นที่เลือกในหน้ายืนยัน
     document.getElementById('f-floor').innerText = floorChecks.join(', ');
+
+    // 🟢 ดึงเหตุผลไปโชว์ในใบยืนยันก่อนกดส่ง
+    const note = document.getElementById('leave-note').value.trim();
+    const noteLabel = document.getElementById('f-note');
+    if (noteLabel) noteLabel.innerText = note ? note : "-";
 
     let examHtml = '';
     document.querySelectorAll('.exam-row').forEach(row => {
@@ -487,28 +496,65 @@ function prepareExamSelection() {
         let checked = Array.from(row.querySelectorAll('input:checked')).map(cb => cb.value);
         if(checked.length === 0) checked = ['ไม่ได้ระบุ'];
         
-        // 🟢 ไฮไลท์สำคัญ: แนบข้อมูลสถานที่เข้าไปต่อท้ายช่วงเวลา (Backend จะดึงไปโชว์อัตโนมัติ)
+        // แนบข้อมูลสถานที่เข้าไปต่อท้ายช่วงเวลา (Backend จะดึงไปโชว์อัตโนมัติ)
         checked.push(`📍สถานที่: ${floorText}`);
 
         examDetails.push({ date: row.getAttribute('data-date'), exams: checked });
       });
-      
+
+      // 🟢 ดึงข้อความเหตุผลเพิ่มเติมเตรียมส่งไปหลังบ้าน
+      const noteText = document.getElementById('leave-note').value.trim();
+
       let ipAddress = await getClientIP(); let deviceStr = getDeviceDetails(); let finalInformer = "";
       if (lineProfile && lineProfile.displayName) finalInformer = `${lineProfile.displayName},${deviceStr},${ipAddress}`;
       else finalInformer = `${deviceStr},${ipAddress}`;
       
-      const res = await callAPI('submitLeave', { data: { user: currentUser, leaveCode: document.getElementById('leave-type').value, startDate: document.getElementById('leave-date').value, examDetails: examDetails, informer: finalInformer }});
+      const res = await callAPI('submitLeave', { 
+        data: { 
+          user: currentUser, 
+          leaveCode: document.getElementById('leave-type').value, 
+          startDate: document.getElementById('leave-date').value, 
+          examDetails: examDetails, 
+          informer: finalInformer,
+          note: noteText // 🟢 แนบเหตุผลส่งไปตรงนี้
+        }
+      });
+      
       if (res && res.success) { 
-        alert('ส่งข้อมูลสำเร็จ'); 
+        Swal.fire({
+          icon: 'success',
+          title: 'สำเร็จ!',
+          text: 'ส่งข้อมูลการลาเรียบร้อยแล้ว',
+          timer: 2000,
+          showConfirmButton: false
+        });
         showView('view-main'); 
-        document.getElementById('leave-date').value = ''; 
         
-        // 🟢 ล้างค่า Checkbox ชั้นออกให้พร้อมใช้งานครั้งถัดไป
+        // 🟢 ล้างค่าฟอร์มทั้งหมดหลังจากส่งข้อมูลเสร็จ
+        document.getElementById('leave-date').value = '';
+        const noteEl = document.getElementById('leave-note');
+        if (noteEl) noteEl.value = '';
         document.querySelectorAll('.floor-check').forEach(cb => cb.checked = false);
-        setupLeaveRules(); 
+        
+        setupLeaveRules();
       } 
-      else { alert('Error: ' + (res ? res.message : 'No Response')); }
-    } catch (err) { alert('Error: ' + err.message); } finally { btn.disabled = false; btn.innerText = 'ยืนยันและส่งข้อมูล'; }
+      else { 
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: res ? res.message : 'ไม่มีการตอบสนองจากเซิร์ฟเวอร์'
+        });
+      }
+    } catch (err) { 
+      Swal.fire({
+        icon: 'error',
+        title: 'การเชื่อมต่อขัดข้อง',
+        text: err.message
+      });
+    } finally { 
+      btn.disabled = false;
+      btn.innerText = 'ยืนยันและส่งข้อมูล'; 
+    }
   }
 
 // ================= เริ่มต้นฟังก์ชันโหลดวันลา =================
