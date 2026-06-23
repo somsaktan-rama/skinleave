@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบลางาน สาขาวิชาโรคผิวหนัง 1.17</title>
+  <title>ระบบลางาน สาขาวิชาโรคผิวหนัง 1.17 A</title>
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -444,7 +444,7 @@ function prepareExamSelection() {
     showView('view-exam');
   }
 
-  function showConfirmView() {
+function showConfirmView() {
     // 1. เช็กเงื่อนไขชั้นที่เลือก
     const floorChecks = Array.from(document.querySelectorAll('.floor-check:checked')).map(cb => cb.value);
     
@@ -463,10 +463,32 @@ function prepareExamSelection() {
       return; // 🔴 หยุดการทำงานตรงนี้ ไม่เปลี่ยนหน้า
     }
 
+    // 🟢 1.5 เช็กเงื่อนไขบังคับใส่เหตุผลเพิ่มเติม
+    const leaveType = document.getElementById('leave-type').value;
+    const noteInput = document.getElementById('leave-note');
+    const note = noteInput ? noteInput.value.trim() : "";
+    
+    // กำหนดประเภทการลาที่ "บังคับ" ต้องใส่เหตุผล (ปรับเพิ่มลดได้ตามต้องการครับ)
+    const mandatoryTypes = ['กิจ', 'ประชุม', 'ต่างประเทศ', 'เรียนเลือก']; 
+    
+    if (mandatoryTypes.includes(leaveType) && note === "") {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ข้อมูลไม่ครบถ้วน',
+          text: `การลาประเภท "${leaveType}" จำเป็นต้องระบุเหตุผลเพิ่มเติม/สถานที่ครับ`,
+          confirmButtonColor: '#0d6efd'
+        });
+      } else {
+        alert(`การลาประเภท "${leaveType}" จำเป็นต้องระบุเหตุผลเพิ่มเติม/สถานที่ครับ`);
+      }
+      return; // 🔴 หยุดการทำงาน ไม่ให้ไปหน้ายืนยัน
+    }
+
     // 2. เติมข้อมูลหลัก
     document.getElementById('f-name').innerText = currentUser.name; 
     document.getElementById('f-group').innerText = currentUser.group;
-    document.getElementById('f-type').innerText = document.getElementById('leave-type').value; 
+    document.getElementById('f-type').innerText = leaveType; 
     document.getElementById('f-start').innerText = document.getElementById('leave-date').value;
     document.getElementById('f-dur').innerText = document.getElementById('leave-duration').value + ' วัน'; 
     document.getElementById('f-time').innerText = new Date().toLocaleString('th-TH');
@@ -475,9 +497,7 @@ function prepareExamSelection() {
     const floorLabel = document.getElementById('f-floor');
     if (floorLabel) floorLabel.innerText = floorChecks.join(', ');
 
-    // 3. ดึงเหตุผล (ใส่ตัวป้องกันเว็บพัง กรณี HTML บางส่วนตกหล่น)
-    const noteInput = document.getElementById('leave-note');
-    const note = noteInput ? noteInput.value.trim() : "";
+    // 3. ดึงเหตุผลไปโชว์ในใบยืนยัน
     const noteLabel = document.getElementById('f-note');
     if (noteLabel) noteLabel.innerText = note ? note : "-";
 
@@ -495,7 +515,7 @@ function prepareExamSelection() {
     // 5. สั่งเปลี่ยนหน้า
     showView('view-confirm');
   }
-
+  
   async function submitLeave() {
     // 🟢 ดึงข้อมูลชั้นที่เลือกไว้
     const floorChecks = Array.from(document.querySelectorAll('.floor-check:checked')).map(cb => cb.value);
